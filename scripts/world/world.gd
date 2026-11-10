@@ -1,8 +1,8 @@
 extends Node2D
 ## Dev forest test map: paints a deterministic 48x32 ground layout from
 ## the production ground tiles, chooses grass->dirt transition tiles by
-## 4-bit neighbor bitmask, and walls the borders so the player cannot
-## walk off the map. Replaced by authored maps in later phases.
+## 4-bit neighbor bitmask, scatters collidable props (trees/rocks) and
+## non-colliding bushes, and walls the map borders.
 
 const MAP_CELLS := Vector2i(48, 32)
 const TILE_SOURCE_ID := 0
@@ -14,7 +14,6 @@ const GRASS_DENSE := Vector2i(1, 0)
 const GRASS_FLOWERS := Vector2i(2, 0)
 const DIRT_PLAIN := Vector2i(3, 0)
 const DIRT_VARIANT := Vector2i(0, 1)
-const DIRT_GRASSY_EDGE := Vector2i(1, 1)
 const STONE_PAVING := Vector2i(2, 1)
 const STONE_MOSS := Vector2i(3, 1)
 const TRANSITION_ROW := 2
@@ -25,15 +24,20 @@ const BIT_E := 2
 const BIT_S := 4
 const BIT_W := 8
 
+## Prop scatter probabilities per terrain family.
+const PROP_CHANCE := {
+	"grass": {"tree": 0.10, "bush": 0.05, "rock": 0.02},
+	"dirt": {"tree": 0.02, "bush": 0.02, "rock": 0.05},
+}
+const SPAWN_CELL := Vector2i(24, 16)
+const SPAWN_CLEAR_RADIUS := 2.5
+const PROP_SEED := 20261112
+
 @onready var ground: TileMapLayer = $GroundLayer
+@onready var props: Node2D = $Props
 
 
 func _ready() -> void:
-	_paint_ground()
-	_build_walls()
-
-
-func _paint_ground() -> void:
 	var macro := FastNoiseLite.new()
 	macro.seed = 20261111
 	macro.frequency = 0.09
@@ -41,19 +45,65 @@ func _paint_ground() -> void:
 	detail.seed = 99
 	detail.frequency = 0.25
 
-	# Pass 1: classify every cell as grass or dirt by macro noise.
+	var dirt_cell := _classify(macro)
+	_paint_ground(dirt_cell, macro, detail)
+	_scatter_props(compute_placements(dirt_cell, MAP_CELLS, PROP_SEED))
+	_build_walls()
+
+
+## Parent to reparent entities into so they y-sort against props.
+func get_entity_parent() -> Node2D:
+	return props
+
+
+## Pure, testable prop placement: returns [{"type": "..", "cell": Vector2i,
+## "variant": int}, ...]. Never places on stone paths, outside the map, on
+## the spawn clearing, or twice on the same cell.
+static func compute_placements(dirt_cell: Dictionary, map_cells: Vector2i, seed: int) -> Array[Dictionary]:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	var occupied := {}
+	var placements: Array[Dictionary] = []
+	for y in map_cells.y:
+		for x in map_cells.x:
+			var cell := Vector2i(x, y)
+			if cell == SPAWN_CELL or (Vector2(cell - SPAWN_CELL).length() <= SPAWN_CLEAR_RADIUS):
+				continue
+			if x == SPAWN_CELL.x or y == SPAWN_CELL.y:
+				continue  # stone cross paths stay clear
+			if occupied.has(cell):
+				continue
+			var family := "dirt" if dirt_cell.get(cell, false) else "grass"
+			var roll := rng.randf()
+			var chance: Dictionary = PROP_CHANCE[family]
+			var kind := ""
+			if roll < chance["tree"]:
+				kind = "tree"
+			elif roll < chance["tree"] + chance["bush"]:
+				kind = "bush"
+			elif roll < chance["tree"] + chance["bush"] + chance["rock"]:
+				kind = "rock"
+			if kind == "":
+				continue
+			occupied[cell] = true
+			placements.append({"type": kind, "cell": cell, "variant": 1 + (rng.randi() % 2)})
+	return placements
+
+
+func _classify(macro: FastNoiseLite) -> Dictionary:
 	var dirt_cell := {}
 	for y in MAP_CELLS.y:
 		for x in MAP_CELLS.x:
 			dirt_cell[Vector2i(x, y)] = macro.get_noise_2d(x, y) <= -0.2
+	return dirt_cell
 
-	# Pass 2: paint. Grass cells take variety tiles; dirt cells take a
-	# transition tile when any 4-neighbor is grass (bitmask atlas row).
+
+func _paint_ground(dirt_cell: Dictionary, macro: FastNoiseLite, detail: FastNoiseLite) -> void:
 	for y in MAP_CELLS.y:
 		for x in MAP_CELLS.x:
 			var cell := Vector2i(x, y)
 			var coords: Vector2i
-			if x == 24 or y == 16:
+			if x == SPAWN_CELL.x or y == SPAWN_CELL.y:
 				coords = STONE_MOSS if detail.get_noise_2d(x, y) > 0.45 else STONE_PAVING
 			elif x == 0 or y == 0 or x == MAP_CELLS.x - 1 or y == MAP_CELLS.y - 1:
 				coords = GRASS_DENSE
@@ -88,6 +138,45 @@ func _grass_neighbor_mask(cell: Vector2i, dirt_cell: Dictionary) -> int:
 func _is_grass_cell(cell: Vector2i, dirt_cell: Dictionary) -> bool:
 	# Out-of-bounds counts as grass so map edges still close their fringes.
 	return not dirt_cell.get(cell, false)
+
+
+func _scatter_props(placements: Array[Dictionary]) -> void:
+	for p in placements:
+		match p["type"]:
+			"tree":
+				_spawn_prop("Tree", p["cell"], p["variant"], "tree_%02d" % p["variant"],
+						Vector2(10, 8), Vector2(0, -4))
+			"rock":
+				_spawn_prop("Rock", p["cell"], p["variant"], "rock_%02d" % p["variant"],
+						Vector2(18, 10), Vector2(0, -5))
+			"bush":
+				var sprite := Sprite2D.new()
+				sprite.name = "Bush_%d_%d" % [p["cell"].x, p["cell"].y]
+				sprite.texture = load("res://assets/sprites/props/bush_%02d.png" % p["variant"])
+				sprite.position = _cell_bottom_center(p["cell"]) + Vector2(0, -sprite.texture.get_height() * 0.5)
+				props.add_child(sprite)
+
+
+func _spawn_prop(prefix: String, cell: Vector2i, variant: int, tex_name: String,
+		shape_size: Vector2, shape_offset: Vector2) -> void:
+	var body := StaticBody2D.new()
+	body.name = "%s_%d_%d" % [prefix, cell.x, cell.y]
+	body.position = _cell_bottom_center(cell)
+	var shape := RectangleShape2D.new()
+	shape.size = shape_size
+	var collider := CollisionShape2D.new()
+	collider.shape = shape
+	collider.position = shape_offset
+	body.add_child(collider)
+	var sprite := Sprite2D.new()
+	sprite.texture = load("res://assets/sprites/props/%s.png" % tex_name)
+	sprite.position = Vector2(0, -sprite.texture.get_height() * 0.5)
+	body.add_child(sprite)
+	props.add_child(body)
+
+
+func _cell_bottom_center(cell: Vector2i) -> Vector2:
+	return Vector2(cell) * 32.0 + Vector2(16.0, 32.0)
 
 
 func _build_walls() -> void:
