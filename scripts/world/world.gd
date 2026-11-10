@@ -120,6 +120,11 @@ func get_entity_parent() -> Node2D:
 	return props
 
 
+## World size in pixels — the camera clamps its limits to this.
+func map_pixel_size() -> Vector2:
+	return Vector2(MAP_CELLS) * Vector2(ground.tile_set.tile_size)
+
+
 ## Cells covered by the meandering river (3 wide, widening to 5).
 static func river_cells() -> Dictionary:
 	var water := {}

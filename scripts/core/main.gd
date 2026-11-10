@@ -29,6 +29,14 @@ func _ready() -> void:
 	# Reparent the player into the world's y-sorted props layer so the
 	# player interleaves correctly with tree canopies while walking.
 	player.reparent($World.get_entity_parent(), true)
+	# Camera clamps to the map rectangle so edges never show void.
+	var cam: Camera2D = player.get_node_or_null("Camera2D")
+	if cam != null:
+		var map_px: Vector2 = $World.map_pixel_size()
+		cam.limit_left = 0
+		cam.limit_top = 0
+		cam.limit_right = int(map_px.x)
+		cam.limit_bottom = int(map_px.y)
 	cast_input.text_submitted.connect(_on_cast_submitted)
 	spellbook_filter.text_changed.connect(_on_spellbook_filter)
 	$World.boss_died.connect(func() -> void:
@@ -111,6 +119,9 @@ func _do_load() -> void:
 		player.global_position = Vector2(p.get("x", 784.0), p.get("y", 528.0))
 		player.hp = p.get("hp", 30.0)
 		player.mana = p.get("mana", 100.0)
+		var cam: Camera2D = player.get_node_or_null("Camera2D")
+		if cam != null:
+			cam.reset_smoothing()
 	spell_session.restore_state(state.get("session", {}))
 	$World.restore_state(state.get("world", {}))
 	_rebuild_codex_ui()

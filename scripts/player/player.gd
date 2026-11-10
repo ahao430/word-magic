@@ -66,6 +66,10 @@ func _respawn() -> void:
 	mana = MANA_MAX
 	_invuln_timer = INVULN_TIME
 	global_position = RESPAWN_POSITION
+	# Teleport: snap the camera instead of gliding across the map.
+	var cam := get_node_or_null("Camera2D")
+	if cam != null:
+		cam.reset_smoothing()
 	GameManager.log_info("player fell; respawned at the crossing")
 
 
