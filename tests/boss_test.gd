@@ -195,6 +195,34 @@ func _run() -> void:
 	_expect(absf(player2.hp - hp_safe) < 0.01, "slam out of radius is harmless")
 	holder.queue_free()
 
+	# --- Enrage (phase 2): below half health the king turns mean ---
+	seat.call("take_damage", 60.0, Vector2.RIGHT)  # 120 -> 60: threshold
+	_expect(bool(seat.get("enraged")), "enrage flag flips at half health")
+	var saw_enrage := false
+	for i in 60:
+		await physics_frame
+		if int(seat.get("state")) == 5:
+			saw_enrage = true
+			break
+	_expect(saw_enrage, "ENRAGE roar state observed")
+	# The enrage cycle now carries a double slam: two wind-ups and two
+	# slams before the next cooldown.
+	var windups := 0
+	var slams := 0
+	var double_done := false
+	for i in 500:
+		await physics_frame
+		var s: int = int(seat.get("state"))
+		if s == 2:
+			windups += 1
+		elif s == 3:
+			slams += 1
+		elif s == 4 and windups >= 2 and slams >= 2:
+			double_done = true
+			break
+	_expect(windups >= 2 and slams >= 2 and double_done,
+			"enraged cycle slams twice (w=%d s=%d)" % [windups, slams])
+
 	# --- Death: signal, world flag, capture flips, node freed ---
 	seat.connect("died", Callable(self, "_flag").bind("died"))
 	seat.call("take_damage", 999.0, Vector2.RIGHT)

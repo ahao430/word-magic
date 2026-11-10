@@ -8,7 +8,7 @@ extends CharacterBody2D
 signal aggroed
 signal died
 
-enum State { DORMANT, CHASE, WINDUP, SLAM, COOLDOWN }
+enum State { DORMANT, CHASE, WINDUP, SLAM, COOLDOWN, ENRAGE }
 
 const AGGRO_RADIUS := 200.0
 const LOSE_RADIUS := 420.0
@@ -23,12 +23,22 @@ const CONTACT_RADIUS := 30.0
 const SLAM_DAMAGE := 12.0
 const SLAM_RADIUS := 80.0
 
+# Enrage (phase 2): below half health everything gets meaner — faster
+# chase, shorter telegraph, heavier slam, one extra slam per cycle.
+const ENRAGED_CHASE_SPEED := 85.0
+const ENRAGED_CHASE_TIME := 2.0
+const ENRAGED_WINDUP_TIME := 0.45
+const ENRAGED_SLAM_DAMAGE := 16.0
+const ENRAGED_COOLDOWN_TIME := 0.5
+const ENRAGE_TIME := 0.6
+
 # Plain var (not const) so the HUD can duck-type read hp_max.
 var hp_max := 120.0
 var hp := hp_max
 var state := State.DORMANT
 var aggro := false
 var alive := true
+var enraged := false
 
 var _state_timer := 0.0
 var _dash_dir := Vector2.ZERO
@@ -36,6 +46,7 @@ var _player: Node2D = null
 var _visual_tween: Tween = null
 var _ring_tween: Tween = null
 var _freeze_timer := 0.0
+var _pending_double := false
 
 
 @onready var sprite: AnimatedSprite2D = $BossSprite
@@ -71,12 +82,21 @@ func _physics_process(delta: float) -> void:
 					aggro = false
 					_enter(State.DORMANT)
 					return
-				velocity = (_player.global_position - global_position).normalized() * CHASE_SPEED
+				var chase_speed := ENRAGED_CHASE_SPEED if enraged else CHASE_SPEED
+				velocity = (_player.global_position - global_position).normalized() * chase_speed
 				if dist < CONTACT_RADIUS and _player.has_method("take_damage"):
 					_player.call("take_damage", CONTACT_DAMAGE,
 							(_player.global_position - global_position).normalized())
 			if _state_timer <= 0.0:
+				# The enrage cycle carries a second slam after the first.
+				if enraged:
+					_pending_double = true
 				_enter(State.WINDUP)
+		State.ENRAGE:
+			# Roar: rooted in place while the rage takes hold.
+			velocity = Vector2.ZERO
+			if _state_timer <= 0.0:
+				_enter(State.CHASE)
 		State.WINDUP:
 			# Telegraph: locked in place while charging the dash.
 			velocity = Vector2.ZERO
@@ -86,7 +106,12 @@ func _physics_process(delta: float) -> void:
 			velocity = _dash_dir * DASH_SPEED
 			if _state_timer <= 0.0:
 				_slam_impact()
-				_enter(State.COOLDOWN)
+				if _pending_double:
+					# Enraged: straight into the second slam.
+					_pending_double = false
+					_enter(State.WINDUP)
+				else:
+					_enter(State.COOLDOWN)
 		State.COOLDOWN:
 			velocity = Vector2.ZERO
 			if _state_timer <= 0.0:
@@ -105,6 +130,14 @@ func take_damage(amount: float, from_dir: Vector2) -> void:
 	flash.tween_property(sprite, "modulate", Color.WHITE, 0.18)
 	if hp <= 0.0:
 		_die()
+	elif not enraged and hp <= hp_max * 0.5:
+		_enrage()
+
+
+## Phase 2: below half health the king roars and everything tightens.
+func _enrage() -> void:
+	enraged = true
+	_enter(State.ENRAGE)
 
 
 ## Freeze mechanic (冰封千里): pauses the skill cycle; thaw resumes it.
@@ -123,10 +156,11 @@ func apply_push(force: Vector2) -> void:
 func _slam_impact() -> void:
 	telegraph.visible = false
 	Sfx.play("sfx_slam")
+	var slam_damage := ENRAGED_SLAM_DAMAGE if enraged else SLAM_DAMAGE
 	if _player != null \
 			and global_position.distance_to(_player.global_position) <= SLAM_RADIUS \
 			and _player.has_method("take_damage"):
-		_player.call("take_damage", SLAM_DAMAGE,
+		_player.call("take_damage", slam_damage,
 				(_player.global_position - global_position).normalized())
 
 
@@ -156,9 +190,9 @@ func _enter(next: State) -> void:
 			_visual_tween = create_tween()
 			_visual_tween.tween_property(sprite, "scale", Vector2.ONE, 0.3)
 		State.CHASE:
-			_state_timer = CHASE_TIME
+			_state_timer = ENRAGED_CHASE_TIME if enraged else CHASE_TIME
 		State.WINDUP:
-			_state_timer = WINDUP_TIME
+			_state_timer = ENRAGED_WINDUP_TIME if enraged else WINDUP_TIME
 			# Lock the dash direction now, at charge start, so the player
 			# can sidestep during the telegraph.
 			if _player != null:
@@ -180,9 +214,16 @@ func _enter(next: State) -> void:
 			_visual_tween = create_tween()
 			_visual_tween.tween_property(sprite, "scale", Vector2(0.85, 1.3), SLAM_TIME)
 		State.COOLDOWN:
-			_state_timer = COOLDOWN_TIME
+			_state_timer = ENRAGED_COOLDOWN_TIME if enraged else COOLDOWN_TIME
 			_visual_tween = create_tween()
 			_visual_tween.tween_property(sprite, "scale", Vector2.ONE, 0.25)
+		State.ENRAGE:
+			_state_timer = ENRAGE_TIME
+			telegraph.visible = false
+			Sfx.play("sfx_enrage")
+			_visual_tween = create_tween()
+			_visual_tween.tween_property(sprite, "modulate", Color(1.5, 0.45, 0.45), 0.25)
+			_visual_tween.tween_property(sprite, "modulate", Color.WHITE, 0.3)
 
 
 func _kill_visual_tween() -> void:

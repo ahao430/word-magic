@@ -8,6 +8,7 @@ const NAMES := [
 	"sfx_hit", "sfx_explosion", "sfx_hurt", "sfx_puzzle",
 	"sfx_slam", "sfx_boss_die",
 	"sfx_impact_ice", "sfx_impact_lightning", "sfx_impact_wind",
+	"sfx_enrage",
 ]
 
 var _failures := 0

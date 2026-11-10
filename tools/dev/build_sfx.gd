@@ -10,6 +10,7 @@ extends SceneTree
 ##   sfx_hit / sfx_explosion / sfx_hurt / sfx_puzzle
 ##   sfx_slam / sfx_boss_die
 ##   sfx_impact_ice / lightning / wind  (fire keeps sfx_explosion)
+##   sfx_enrage
 
 const OUT_DIR := "res://assets/audio/sfx"
 const RATE := 22050
@@ -29,7 +30,8 @@ func _init() -> void:
 	_save("sfx_impact_ice", 0.22, _impact_ice)
 	_save("sfx_impact_lightning", 0.20, _impact_lightning)
 	_save("sfx_impact_wind", 0.25, _impact_wind)
-	print("[sfx] 13 streams saved to " + OUT_DIR)
+	_save("sfx_enrage", 0.6, _enrage)
+	print("[sfx] 14 streams saved to " + OUT_DIR)
 	quit()
 
 
@@ -164,3 +166,11 @@ func _impact_wind(t: float, i: int) -> float:
 		brown += _noise(i + k * 811, 71 + k) / 4.0
 	var thump := sin(TAU * (180.0 - 90.0 * t / 0.25) * t) * 0.25
 	return clampf(brown * _env(t, 0.01, 12.0) * 1.5 + thump * _env(t, 0.004, 14.0), -1.0, 1.0)
+
+
+func _enrage(t: float, _i: int) -> float:
+	# Rising roar: saw sweep upward over a low growl.
+	var phase := TAU * (140.0 * t + 283.0 * t * t)
+	var saw := fmod(phase / TAU, 1.0) * 2.0 - 1.0
+	var growl := sin(TAU * 90.0 * t) * 0.45
+	return clampf((saw * 0.35 + growl) * _env(t, 0.02, 4.0), -1.0, 1.0)

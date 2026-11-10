@@ -86,6 +86,7 @@ func _on_slot_chosen(slot: String) -> void:
 
 ## Boss health bar: visible only while the Slime King is alive and
 ## aggro'd (duck-typed reads keep the HUD decoupled from the boss class).
+## Enrage (phase 2) tints the bar blood-red.
 func _update_boss_bar() -> void:
 	var show_bar := false
 	var boss: Node2D = $World.get_boss()
@@ -93,6 +94,8 @@ func _update_boss_bar() -> void:
 			and bool(boss.get("aggro")):
 		boss_bar.max_value = float(boss.get("hp_max"))
 		boss_bar.value = float(boss.get("hp"))
+		boss_bar.modulate = Color(1.0, 0.55, 0.5) if bool(boss.get("enraged")) \
+				else Color(1, 1, 1)
 		show_bar = true
 	boss_bar.visible = show_bar
 	boss_label.visible = show_bar
