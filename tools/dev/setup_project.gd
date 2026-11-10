@@ -25,6 +25,7 @@ func _init() -> void:
 	_add_key_action("attack", [KEY_SPACE], [MOUSE_BUTTON_LEFT])
 	_add_key_action("interact", [KEY_E], [MOUSE_BUTTON_RIGHT])
 	_add_key_action("pause", [KEY_ESCAPE])
+	_add_key_action("toggle_spellbook", [KEY_TAB])
 
 	var err := ProjectSettings.save()
 	if err != OK:

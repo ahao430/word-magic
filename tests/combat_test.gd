@@ -31,15 +31,18 @@ func _run() -> void:
 	await physics_frame
 	Input.action_release("move_right")
 
-	var r1: Dictionary = MagicFacade.cast("火球术", player, world)
+	var session := SpellSession.new()
+	var r1: Dictionary = MagicFacade.cast("火球术", player, world, session)
 	_expect(r1["ok"], "first 火球术 cast")
 	for i in 45:
 		await physics_frame
 	_expect(is_instance_valid(slime) and slime.hp <= 10.0,
 			"first hit lands (hp %.1f of 30)" % (slime.hp if is_instance_valid(slime) else -1.0))
 
-	var r2: Dictionary = MagicFacade.cast("火球术", player, world)
-	_expect(r2["ok"], "second 火球术 cast")
+	# Session uniqueness: 火球术 is spent this adventure, so the killing
+	# blow must be a different spell (寒冰箭, 16 dmg >= remaining 10).
+	var r2: Dictionary = MagicFacade.cast("寒冰箭", player, world, session)
+	_expect(r2["ok"], "寒冰箭 as the killing cast")
 	for i in 60:
 		await physics_frame
 		if not is_instance_valid(slime):

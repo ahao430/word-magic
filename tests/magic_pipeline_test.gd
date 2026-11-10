@@ -51,7 +51,8 @@ func _run() -> void:
 	await physics_frame
 	await physics_frame
 
-	var r1: Dictionary = MagicFacade.cast("  火球术！", player, world)
+	var session := SpellSession.new()
+	var r1: Dictionary = MagicFacade.cast("  火球术！", player, world, session)
 	_expect(r1["ok"], "cast 火球术 succeeds (%s)" % r1["message"])
 	_expect(absf(player.mana - (100.0 - r1["cost"])) < 0.01, "mana charged (left %.1f)" % player.mana)
 	var projectiles := 0
@@ -59,17 +60,35 @@ func _run() -> void:
 		if child is Area2D:
 			projectiles += 1
 	_expect(projectiles >= 1, "projectile spawned")
+	_expect(session.codex.size() == 1, "successful cast recorded in codex")
 
-	var r2: Dictionary = MagicFacade.cast("神秘乱语", player, world)
+	# Same spell again this adventure: duplicate, no mana charged.
+	# (Normalized text matches the stored "火球术", so the normalized
+	# check fires before the mechanism check.)
+	var mana_after_r1: float = player.mana
+	var rdup: Dictionary = MagicFacade.cast("火球术", player, world, session)
+	_expect(not rdup["ok"] and rdup["reason"] == "duplicate_normalized",
+			"recast blocked as duplicate (%s)" % rdup["reason"])
+	_expect(absf(player.mana - mana_after_r1) < 0.01, "duplicate charges no mana")
+
+	var r2: Dictionary = MagicFacade.cast("神秘乱语", player, world, session)
 	_expect(not r2["ok"] and r2["reason"] == "unknown", "unknown phrase rejected gracefully")
 
-	var r3: Dictionary = MagicFacade.cast("风卷残云", player, world)
+	# Unimplemented shape: refunded AND not recorded, so retrying it is
+	# still the same not_unlocked answer rather than a duplicate.
+	var r3: Dictionary = MagicFacade.cast("风卷残云", player, world, session)
 	_expect(not r3["ok"] and r3["reason"] == "not_unlocked",
 			"unimplemented shape refunded with message (%s)" % r3["message"])
+	var r3b: Dictionary = MagicFacade.cast("风卷残云", player, world, session)
+	_expect(not r3b["ok"] and r3b["reason"] == "not_unlocked",
+			"failed casts are not recorded as duplicates")
+	_expect(session.codex.size() == 1, "codex still holds one entry")
 
+	# Low mana on a FRESH session so uniqueness does not mask the check.
+	var fresh := SpellSession.new()
 	var mana_before: float = player.mana
 	player.mana = 3.0
-	var r4: Dictionary = MagicFacade.cast("火球术", player, world)
+	var r4: Dictionary = MagicFacade.cast("火球术", player, world, fresh)
 	_expect(not r4["ok"] and r4["reason"] == "no_mana", "low mana blocks cast")
 	player.mana = mana_before
 

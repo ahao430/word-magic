@@ -10,6 +10,11 @@ const MAGIC := preload("res://scripts/magic/magic_facade.gd")
 @onready var hp_bar: ProgressBar = $HUD/HpBar
 @onready var cast_result: Label = $HUD/CastResult
 @onready var cast_input: LineEdit = $HUD/CastInput
+@onready var spellbook: PanelContainer = $HUD/Spellbook
+@onready var spellbook_list: VBoxContainer = $HUD/Spellbook/Margin/Rows/List
+
+## One spell session per adventure (uniqueness + codex).
+var spell_session := SpellSession.new()
 
 var _result_clear_timer: SceneTreeTimer
 
@@ -25,18 +30,46 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	mana_bar.value = player.mana
 	hp_bar.value = player.hp
+	if Input.is_action_just_pressed("toggle_spellbook"):
+		spellbook.visible = not spellbook.visible
 
 
 func _on_cast_submitted(text: String) -> void:
 	cast_input.clear()
 	cast_input.release_focus()
-	var result: Dictionary = MAGIC.cast(text, player, $World)
+	var result: Dictionary = MAGIC.cast(text, player, $World, spell_session)
 	cast_result.text = result["message"]
 	if result["ok"]:
 		cast_result.add_theme_color_override("font_color", Color(0.7, 1.0, 0.7))
 		GameManager.log_info("cast '%s' ok, cost %d" % [text, result["cost"]])
+		_add_codex_row(result["spell"])
 	else:
 		cast_result.add_theme_color_override("font_color", Color(1.0, 0.65, 0.6))
 		GameManager.log_info("cast '%s' failed: %s" % [text, result["reason"]])
 	_result_clear_timer = get_tree().create_timer(3.0)
 	_result_clear_timer.timeout.connect(func(): cast_result.text = "")
+
+
+func _add_codex_row(spell: Dictionary) -> void:
+	var row := Label.new()
+	row.text = "%s · %s · %s · %d 魔力" % [
+			spell.get("display", "?"),
+			_element_name(spell.get("element", "")),
+			spell.get("shape", "?"),
+			spell.get("cost", 0)]
+	spellbook_list.add_child(row)
+
+
+func _element_name(element: String) -> String:
+	match element:
+		"fire":
+			return "火"
+		"ice":
+			return "冰"
+		"lightning":
+			return "雷"
+		"nature":
+			return "自然"
+		"wind":
+			return "风"
+	return element

@@ -8,6 +8,7 @@ extends Node2D
 const SHOT_A := "/tmp/wm_gameplay_idle.png"
 const SHOT_B := "/tmp/wm_gameplay_moved.png"
 const SHOT_C := "/tmp/wm_gameplay_cast.png"
+const SHOT_D := "/tmp/wm_gameplay_spellbook.png"
 
 const MAGIC := preload("res://scripts/magic/magic_facade.gd")
 
@@ -45,12 +46,19 @@ func _ready() -> void:
 	await RenderingServer.frame_post_draw
 	Input.action_release("move_right")
 
-	var result: Dictionary = MAGIC.cast("火球术", player, main.get_node("World"))
+	var result: Dictionary = MAGIC.cast("火球术", player, main.get_node("World"), SpellSession.new())
 	print("[shot] cast: ", result["message"], " cost ", result["cost"])
 	for i in 18:
 		await RenderingServer.frame_post_draw  # ~impact at 150px / 300px/s
 	_capture(SHOT_C)
 	print("[shot] cast saved")
+
+	# Open the spellbook panel to show the codex entry.
+	main.get_node("HUD/Spellbook").visible = true
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	_capture(SHOT_D)
+	print("[shot] spellbook saved")
 
 	get_tree().quit()
 
