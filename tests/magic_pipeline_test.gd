@@ -6,6 +6,9 @@ extends SceneTree
 ##   godot --headless --path . -s res://tests/magic_pipeline_test.gd
 
 var _failures := 0
+## Isolation: casts here persist spell-cache entries — stash the dev's
+## real cache and restore it at the end.
+var _cache_backup := ""
 
 
 func _initialize() -> void:
@@ -13,6 +16,9 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_cache_backup = TestIsolation.stash(TestIsolation.CACHE_PATH)
+	SpellCache.reset()
+
 	# --- Text normalization ---
 	_expect(TextNormalizer.normalize("  火球术 ") == "火球术", "trims whitespace")
 	_expect(TextNormalizer.normalize("火球术！") == "火球术", "strips punctuation")
@@ -92,6 +98,8 @@ func _run() -> void:
 	_expect(not r4["ok"] and r4["reason"] == "no_mana", "low mana blocks cast")
 	player.mana = mana_before
 
+	TestIsolation.unstash(TestIsolation.CACHE_PATH, _cache_backup)
+	SpellCache.reset()
 	_finish()
 
 

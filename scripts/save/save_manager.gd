@@ -104,3 +104,58 @@ static func delete_world_memory() -> Dictionary:
 	if err != OK:
 		return {"ok": false, "error": "delete failed (%d)" % err}
 	return {"ok": true, "error": ""}
+
+
+## --- Global spell cache (tier 3, AGENTS.md §11) ---
+## Parsed-spell reuse across adventures, keyed by exact and normalized
+## text. A missing file is an empty cache; an incompatible version is
+## dropped (schema migrations come later); a corrupt file never blocks
+## casting — the pipeline falls through to the local registry.
+
+const SPELL_CACHE_PATH := "user://spell_cache.json"
+const SPELL_CACHE_VERSION := 1
+
+
+## Returns {"ok": bool, "error": String}. Atomic write.
+static func save_spell_cache(data: Dictionary) -> Dictionary:
+	var payload := {"version": SPELL_CACHE_VERSION, "cache": data}
+	var tmp := SPELL_CACHE_PATH + ".tmp"
+	var file := FileAccess.open(tmp, FileAccess.WRITE)
+	if file == null:
+		return {"ok": false, "error": "cannot open tmp file"}
+	file.store_string(JSON.stringify(payload, "\t"))
+	file.close()
+	var err := DirAccess.rename_absolute(tmp, SPELL_CACHE_PATH)
+	if err != OK:
+		return {"ok": false, "error": "rename failed (%d)" % err}
+	return {"ok": true, "error": ""}
+
+
+## Returns {"ok": bool, "cache": Dictionary, "error": String}. Missing
+## file → ok + empty; wrong version → refused (caller drops it); corrupt
+## file → refused.
+static func load_spell_cache() -> Dictionary:
+	if not FileAccess.file_exists(SPELL_CACHE_PATH):
+		return {"ok": true, "cache": {}, "error": ""}
+	var file := FileAccess.open(SPELL_CACHE_PATH, FileAccess.READ)
+	if file == null:
+		return {"ok": false, "cache": {}, "error": "cannot open"}
+	var parsed = JSON.parse_string(file.get_as_text())
+	file.close()
+	if parsed == null or not parsed is Dictionary:
+		return {"ok": false, "cache": {}, "error": "corrupted spell cache"}
+	var version: int = int(parsed.get("version", 0))
+	if version != SPELL_CACHE_VERSION:
+		return {"ok": false, "cache": {},
+				"error": "unsupported version %d" % version}
+	return {"ok": true, "cache": parsed.get("cache", {}), "error": ""}
+
+
+## Dev/test reset. Returns {"ok", "error"}.
+static func delete_spell_cache() -> Dictionary:
+	if not FileAccess.file_exists(SPELL_CACHE_PATH):
+		return {"ok": true, "error": ""}
+	var err := DirAccess.remove_absolute(ProjectSettings.globalize_path(SPELL_CACHE_PATH))
+	if err != OK:
+		return {"ok": false, "error": "delete failed (%d)" % err}
+	return {"ok": true, "error": ""}

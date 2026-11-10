@@ -11,6 +11,7 @@ var _failures := 0
 ## World memory isolation: the rune activation in here persists a
 ## permanent event — back up / clear / restore the real file.
 var _memory_backup := ""
+var _cache_backup := ""
 
 
 func _initialize() -> void:
@@ -18,13 +19,10 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	_memory_backup = ""
-	if FileAccess.file_exists(SaveManager.WORLD_MEMORY_PATH):
-		var mf := FileAccess.open(SaveManager.WORLD_MEMORY_PATH, FileAccess.READ)
-		_memory_backup = mf.get_as_text()
-		mf.close()
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveManager.WORLD_MEMORY_PATH))
+	_memory_backup = TestIsolation.stash(TestIsolation.MEMORY_PATH)
+	_cache_backup = TestIsolation.stash(TestIsolation.CACHE_PATH)
 	WorldMemory.reset()
+	SpellCache.reset()
 	# --- SaveManager unit: roundtrip ---
 	var sample := {"a": 1, "b": "文字", "nested": {"c": [1, 2, 3]}}
 	var s1: Dictionary = SaveManager.save_game(sample, SLOT)
@@ -143,14 +141,11 @@ func _run() -> void:
 	_expect(not recast["ok"] and recast["reason"].begins_with("duplicate_"),
 			"used spells stay spent after reload (%s)" % recast["reason"])
 
-	# Restore the developer's real world-memory file.
-	if _memory_backup != "":
-		var rf := FileAccess.open(SaveManager.WORLD_MEMORY_PATH, FileAccess.WRITE)
-		rf.store_string(_memory_backup)
-		rf.close()
-	else:
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveManager.WORLD_MEMORY_PATH))
+	# Restore the developer's real world state files.
+	TestIsolation.unstash(TestIsolation.MEMORY_PATH, _memory_backup)
+	TestIsolation.unstash(TestIsolation.CACHE_PATH, _cache_backup)
 	WorldMemory.reset()
+	SpellCache.reset()
 
 	_finish()
 

@@ -9,6 +9,7 @@ var _failures := 0
 ## World memory isolation: the main scene is real; nothing here records
 ## permanent events, but keep the run hermetic anyway.
 var _memory_backup := ""
+var _cache_backup := ""
 
 
 func _initialize() -> void:
@@ -16,13 +17,10 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	_memory_backup = ""
-	if FileAccess.file_exists(SaveManager.WORLD_MEMORY_PATH):
-		var mf := FileAccess.open(SaveManager.WORLD_MEMORY_PATH, FileAccess.READ)
-		_memory_backup = mf.get_as_text()
-		mf.close()
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveManager.WORLD_MEMORY_PATH))
+	_memory_backup = TestIsolation.stash(TestIsolation.MEMORY_PATH)
+	_cache_backup = TestIsolation.stash(TestIsolation.CACHE_PATH)
 	WorldMemory.reset()
+	SpellCache.reset()
 
 	var main: Node2D = load("res://scenes/main/main.tscn").instantiate()
 	root.add_child(main)
@@ -101,13 +99,10 @@ func _run() -> void:
 
 	for child in root.get_children():
 		child.free()
-	if _memory_backup != "":
-		var rf := FileAccess.open(SaveManager.WORLD_MEMORY_PATH, FileAccess.WRITE)
-		rf.store_string(_memory_backup)
-		rf.close()
-	else:
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveManager.WORLD_MEMORY_PATH))
+	TestIsolation.unstash(TestIsolation.MEMORY_PATH, _memory_backup)
+	TestIsolation.unstash(TestIsolation.CACHE_PATH, _cache_backup)
 	WorldMemory.reset()
+	SpellCache.reset()
 	_finish()
 
 

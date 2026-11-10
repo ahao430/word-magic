@@ -5,6 +5,8 @@ extends SceneTree
 ##   godot --headless --path . -s res://tests/combat_test.gd
 
 var _failures := 0
+## Isolation: casts here persist spell-cache entries.
+var _cache_backup := ""
 
 
 func _initialize() -> void:
@@ -12,6 +14,8 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_cache_backup = TestIsolation.stash(TestIsolation.CACHE_PATH)
+	SpellCache.reset()
 	var world: Node2D = load("res://scenes/world/world.tscn").instantiate()
 	root.add_child(world)
 	var player: CharacterBody2D = load("res://scenes/player/player.tscn").instantiate()
@@ -72,6 +76,8 @@ func _run() -> void:
 	_expect(player.global_position.distance_to(Vector2(784, 528)) < 1.0,
 			"respawn at the crossing (at %s)" % player.global_position)
 
+	TestIsolation.unstash(TestIsolation.CACHE_PATH, _cache_backup)
+	SpellCache.reset()
 	_finish()
 
 
