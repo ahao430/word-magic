@@ -89,17 +89,18 @@ func _run() -> void:
 			"implemented cast records as duplicate on retry (%s)" % r3b["reason"])
 	_expect(session.codex.size() == 2, "codex holds projectile + tornado")
 
-	# Unimplemented shape: refunded AND not recorded, so retrying it is
-	# still the same not_unlocked answer rather than a duplicate.
-	var shield_draft := LocalSpellRegistry.lookup("火球术").duplicate(true)
-	shield_draft["shape"] = "shield"
-	SpellCache.store("守护之壁", "守护之壁", shield_draft)
-	var r4: Dictionary = MagicFacade.cast("守护之壁", player, world, session)
-	_expect(not r4["ok"] and r4["reason"] == "not_unlocked",
-			"unimplemented shape refunded with message (%s)" % r4["message"])
-	var r4b: Dictionary = MagicFacade.cast("守护之壁", player, world, session)
-	_expect(not r4b["ok"] and r4b["reason"] == "not_unlocked",
-			"failed casts are not recorded as duplicates")
+	# Shape outside the validator whitelist: rejected at validation
+	# (before mana, before the executor), never recorded. The executor's
+	# not_unlocked branch is now a pure defense-in-depth fallback.
+	var dream_draft := LocalSpellRegistry.lookup("火球术").duplicate(true)
+	dream_draft["shape"] = "dream"
+	SpellCache.store("梦中咒", "梦中咒", dream_draft)
+	var r4: Dictionary = MagicFacade.cast("梦中咒", player, world, session)
+	_expect(not r4["ok"] and r4["reason"] == "invalid",
+			"whitelist-external shape rejected by the validator (%s)" % r4["reason"])
+	var r4b: Dictionary = MagicFacade.cast("梦中咒", player, world, session)
+	_expect(not r4b["ok"] and r4b["reason"] == "invalid",
+			"refused casts are not recorded as duplicates")
 	_expect(session.codex.size() == 2, "codex unchanged by refused shape")
 
 	# Low mana on a FRESH session so uniqueness does not mask the check.

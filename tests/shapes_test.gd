@@ -93,6 +93,106 @@ func _run() -> void:
 	_expect(dist_after > dist_before + 24.0,
 			"tornado shoves the slime away (%.0f -> %.0f px)" % [dist_before, dist_after])
 
+	# --- Beam (烈光贯日): hits along the ray, misses beside it ---
+	# Let the tornado field expire first: its 90px reach covers every
+	# later placement and its ticks would pollute these assertions.
+	for i in 200:
+		await physics_frame
+	var session4 := SpellSession.new()
+	player.mana = 100.0
+	var slime4: CharacterBody2D = load("res://scenes/enemies/slime.tscn").instantiate()
+	slime4.position = player.global_position + Vector2(120, 0)  # on the ray (length 160)
+	slime4.hp = 200.0
+	world.get_entity_parent().add_child(slime4)
+	await physics_frame
+	var hp4: float = slime4.hp
+	var r5: Dictionary = MagicFacade.cast("烈光贯日", player, world, session4)
+	_expect(r5["ok"], "烈光贯日 casts (%s)" % r5["reason"])
+	for i in 50:
+		await physics_frame
+	_expect(slime4.hp < hp4, "beam burns the slime on the ray (hp %.0f -> %.0f)" % [hp4, slime4.hp])
+	var off_ray: CharacterBody2D = load("res://scenes/enemies/slime.tscn").instantiate()
+	off_ray.position = player.global_position + Vector2(120, 90)  # beside the 24px ray
+	off_ray.hp = 200.0
+	world.get_entity_parent().add_child(off_ray)
+	await physics_frame
+	var off_hp: float = off_ray.hp
+	var r6: Dictionary = MagicFacade.cast("烈光贯日", player, world, session4)
+	_expect(not r6["ok"] and r6["reason"].begins_with("duplicate"),
+			"beam is spent for this session")
+	_expect(off_ray.hp == off_hp, "slime beside the ray is untouched")
+
+	# --- Area (大地脉动): centered burst with knockback ---
+	player.mana = 100.0
+	var session5 := SpellSession.new()
+	var slime5: CharacterBody2D = load("res://scenes/enemies/slime.tscn").instantiate()
+	slime5.position = player.global_position + Vector2(60, 0)
+	slime5.hp = 200.0
+	world.get_entity_parent().add_child(slime5)
+	await physics_frame
+	var hp5: float = slime5.hp
+	var dist5: float = slime5.global_position.distance_to(player.global_position)
+	var r7: Dictionary = MagicFacade.cast("大地脉动", player, world, session5)
+	_expect(r7["ok"], "大地脉动 casts")
+	for i in 20:
+		await physics_frame
+	_expect(slime5.hp < hp5, "area burst hurts the near slime")
+	_expect(slime5.global_position.distance_to(player.global_position) > dist5 + 4.0,
+			"area burst knocks the slime back")
+
+	# --- Shield (守护之壁): mitigation for the duration ---
+	# Clear every stray enemy: their bites arm the player's invuln
+	# window and would swallow the damage probe below.
+	for child in world.get_entity_parent().get_children():
+		if child is CharacterBody2D and child != player:
+			child.free()
+	for i in 55:
+		await physics_frame
+	player.mana = 100.0
+	var session6 := SpellSession.new()
+	var r8: Dictionary = MagicFacade.cast("守护之壁", player, world, session6)
+	_expect(r8["ok"], "守护之壁 casts")
+	_expect(float(player.get("shield_timer")) > 0.0, "shield timer armed")
+	var hp_shield: float = player.hp
+	player.take_damage(10.0, Vector2.RIGHT)
+	_expect(absf(player.hp - (hp_shield - 4.0)) < 0.01,
+			"shield cuts damage to 40%% (10 -> %.1f)" % (hp_shield - player.hp))
+	# Expire the shield, let the i-frames from the last probe lapse,
+	# then a hit lands at full force.
+	player.set("shield_timer", 0.0)
+	for i in 55:
+		await physics_frame
+	var hp_plain: float = player.hp
+	player.take_damage(10.0, Vector2.RIGHT)
+	_expect(absf(player.hp - (hp_plain - 10.0)) < 0.01, "after expiry damage is full")
+
+	# --- Summon (唤灵术): orbiting spirit zaps the nearest enemy ---
+	player.mana = 100.0
+	var session7 := SpellSession.new()
+	var slime6: CharacterBody2D = load("res://scenes/enemies/slime.tscn").instantiate()
+	slime6.position = player.global_position + Vector2(70, 0)
+	slime6.hp = 200.0
+	world.get_entity_parent().add_child(slime6)
+	await physics_frame
+	var hp6: float = slime6.hp
+	var r9: Dictionary = MagicFacade.cast("唤灵术", player, world, session7)
+	_expect(r9["ok"], "唤灵术 casts")
+	var spirit: Node2D = null
+	for child in world.get_entity_parent().get_children():
+		if child.name.begins_with("Summon"):
+			spirit = child
+	_expect(spirit != null, "spirit node spawned")
+	for i in 70:
+		await physics_frame
+	_expect(slime6.hp < hp6, "spirit zaps the nearest enemy (hp %.0f -> %.0f)" % [hp6, slime6.hp])
+	for i in 200:
+		await physics_frame
+	var spirits := 0
+	for child in world.get_entity_parent().get_children():
+		if child.name.begins_with("Summon"):
+			spirits += 1
+	_expect(spirits == 0, "spirit dissolves after its duration")
+
 	# --- Zones expire: no zone nodes linger after their duration ---
 	for i in 300:
 		await physics_frame
@@ -102,13 +202,13 @@ func _run() -> void:
 			zones += 1
 	_expect(zones == 0, "zones expire cleanly (%d left)" % zones)
 
-	# --- Unimplemented shape still refunds (shield via raw executor) ---
+	# --- Executor fallback: an unknown shape stays not_unlocked ---
 	var mana_before: float = player.mana
-	var fake := {"display": "守护之壁", "element": "nature", "shape": "shield",
+	var fake := {"display": "梦中咒", "element": "nature", "shape": "dream",
 			"mechanics": [], "parameters": {"damage": 0.0, "radius": 60.0,
 			"speed": 0.0, "duration": 2.0}, "cost": 10}
 	var r4: Dictionary = SpellExecutor.execute(fake, player, world)
-	_expect(not r4["ok"] and r4["reason"] == "not_unlocked", "shield shape stays not_unlocked")
+	_expect(not r4["ok"] and r4["reason"] == "not_unlocked", "unknown shape stays not_unlocked")
 	_expect(player.mana == mana_before, "no mana charged by the executor itself")
 
 	_finish()

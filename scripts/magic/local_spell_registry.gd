@@ -44,6 +44,26 @@ const DRAFTS := {
 		"mechanics": ["damage", "knockback"],
 		"parameters": {"damage": 10, "radius": 90, "speed": 0, "duration": 4.0},
 	},
+	"烈光贯日": {
+		"display": "烈光贯日", "element": "lightning", "shape": "beam",
+		"mechanics": ["damage"],
+		"parameters": {"damage": 25, "radius": 80, "speed": 0, "duration": 1.2},
+	},
+	"大地脉动": {
+		"display": "大地脉动", "element": "nature", "shape": "area",
+		"mechanics": ["damage", "knockback"],
+		"parameters": {"damage": 18, "radius": 100, "speed": 0, "duration": 0.0},
+	},
+	"守护之壁": {
+		"display": "守护之壁", "element": "nature", "shape": "shield",
+		"mechanics": [],
+		"parameters": {"damage": 0, "radius": 0, "speed": 0, "duration": 3.0},
+	},
+	"唤灵术": {
+		"display": "唤灵术", "element": "nature", "shape": "summon",
+		"mechanics": ["damage"],
+		"parameters": {"damage": 8, "radius": 90, "speed": 0, "duration": 4.0},
+	},
 }
 
 

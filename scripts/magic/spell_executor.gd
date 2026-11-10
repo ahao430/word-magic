@@ -13,6 +13,8 @@ extends RefCounted
 const ProjectileScript := preload("res://scripts/effects/projectile.gd")
 const BlastScript := preload("res://scripts/effects/blast.gd")
 const ZoneScript := preload("res://scripts/effects/field_zone.gd")
+const BeamScript := preload("res://scripts/effects/beam.gd")
+const SummonScript := preload("res://scripts/effects/summon.gd")
 
 
 static func execute(spell: Dictionary, caster: Node2D, world: Node2D) -> Dictionary:
@@ -23,6 +25,14 @@ static func execute(spell: Dictionary, caster: Node2D, world: Node2D) -> Diction
 			return _execute_explosion(spell, caster, world)
 		"field", "tornado":
 			return _execute_zone(spell, caster, world)
+		"area":
+			return _execute_area(spell, caster, world)
+		"beam":
+			return _execute_beam(spell, caster, world)
+		"shield":
+			return _execute_shield(spell, caster)
+		"summon":
+			return _execute_summon(spell, caster, world)
 		_:
 			return {"ok": false, "reason": "not_unlocked",
 					"message": "「%s」的形态尚未觉醒" % spell.get("display", spell["shape"])}
@@ -54,6 +64,40 @@ static func _execute_zone(spell: Dictionary, caster: Node2D, world: Node2D) -> D
 	ZoneScript.spawn(spell, caster.global_position, parent)
 	var message := "「%s」寒霜漫开" if spell.get("shape", "") == "field" else "「%s」狂风大作"
 	return {"ok": true, "message": message % spell.get("display", "?")}
+
+
+## Area burst centered on the caster (大地脉动): reuse the blast node.
+static func _execute_area(spell: Dictionary, caster: Node2D, world: Node2D) -> Dictionary:
+	var parent := _spawn_parent(world)
+	BlastScript.spawn(spell, caster.global_position, parent)
+	return {"ok": true, "message": "「%s」大地轰鸣" % spell.get("display", "?")}
+
+
+## Directed ray held for the duration (烈光贯日).
+static func _execute_beam(spell: Dictionary, caster: Node2D, world: Node2D) -> Dictionary:
+	var direction := Vector2.RIGHT
+	if caster.has_method("get_facing_vector"):
+		direction = caster.call("get_facing_vector")
+	var parent := _spawn_parent(world)
+	BeamScript.spawn(spell, caster.global_position, direction, parent)
+	return {"ok": true, "message": "「%s」光柱贯空" % spell.get("display", "?")}
+
+
+## Self-buff: damage mitigation for the duration (守护之壁). Needs an
+## apply_shield receiver — the player has one; anything else refuses.
+static func _execute_shield(spell: Dictionary, caster: Node2D) -> Dictionary:
+	if not caster.has_method("apply_shield"):
+		return {"ok": false, "reason": "no_target", "message": "此身无法承载护壁"}
+	var duration: float = spell.get("parameters", {}).get("duration", 0.0)
+	caster.call("apply_shield", duration)
+	return {"ok": true, "message": "「%s」护壁成形" % spell.get("display", "?")}
+
+
+## Companion spirit that orbits and zaps (唤灵术).
+static func _execute_summon(spell: Dictionary, caster: Node2D, world: Node2D) -> Dictionary:
+	var parent := _spawn_parent(world)
+	SummonScript.spawn(spell, caster, parent)
+	return {"ok": true, "message": "「%s」灵体相随" % spell.get("display", "?")}
 
 
 static func _spawn_parent(world: Node2D) -> Node2D:

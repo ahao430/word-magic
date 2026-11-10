@@ -17,7 +17,7 @@
 | Balance Calculator | ✅ | `spell_balance.gd`：游戏侧统一算价 |
 | Duplicate Detection | ✅ | `spell_session.gd`：exact → normalized → mechanism 三级 |
 | Spell Factory | ✅ | `spell_factory.gd` |
-| Spell Executor | ✅ | `spell_executor.gd`（已实现形状：**projectile / explosion / field / tornado**；area / beam / shield / summon 保持"未觉醒"退款） |
+| Spell Executor | ✅ | `spell_executor.gd`（**白名单 8 形状全部实装**：projectile / explosion / field / tornado / area / beam / shield / summon） |
 
 `magic_facade.cast()` 按上表顺序编排，返回额外带 `source` 诊断字段
 （`registry` / `cache_exact` / `cache_normalized`），UI 不消费。

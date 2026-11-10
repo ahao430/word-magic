@@ -17,12 +17,21 @@ const RESPAWN_POSITION := Vector2(784, 528)
 
 var _facing := "down"
 var _invuln_timer := 0.0
+var shield_timer := 0.0
+var _shield_fx: Sprite2D = null
 var mana := MANA_MAX
 var hp := HP_MAX
 
 
 func _physics_process(_delta: float) -> void:
 	mana = minf(mana + MANA_REGEN * _delta, MANA_MAX)
+	if shield_timer > 0.0:
+		shield_timer -= _delta
+		if _shield_fx != null:
+			_shield_fx.visible = true
+			_shield_fx.rotation += 1.5 * _delta
+	elif _shield_fx != null:
+		_shield_fx.visible = false
 	if _invuln_timer > 0.0:
 		_invuln_timer -= _delta
 		# Blink while invulnerable.
@@ -48,6 +57,9 @@ func _physics_process(_delta: float) -> void:
 func take_damage(amount: float, from_dir: Vector2) -> void:
 	if _invuln_timer > 0.0:
 		return
+	# 守护之壁: while the shield holds, damage is cut to 40%.
+	if shield_timer > 0.0:
+		amount *= 0.4
 	hp -= amount
 	_invuln_timer = INVULN_TIME
 	Sfx.play("sfx_hurt")
@@ -82,6 +94,19 @@ func try_consume_mana(amount: float) -> bool:
 
 func refund_mana(amount: float) -> void:
 	mana = minf(mana + amount, MANA_MAX)
+
+
+## 守护之壁 (shield spell): damage mitigation for the duration, with a
+## spinning translucent ring as the visual.
+func apply_shield(duration: float) -> void:
+	shield_timer = maxf(shield_timer, duration)
+	if _shield_fx == null:
+		_shield_fx = Sprite2D.new()
+		_shield_fx.name = "ShieldFx"
+		_shield_fx.texture = load("res://assets/sprites/effects/field_zone_128.png")
+		_shield_fx.modulate = Color(0.6, 1.2, 0.8, 0.5)
+		_shield_fx.scale = Vector2(0.55, 0.55)
+		add_child(_shield_fx)
 
 
 func get_facing_vector() -> Vector2:
