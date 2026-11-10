@@ -1,8 +1,10 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/core/main.gd" id="1_main"]
 
 [ext_resource type="Script" path="res://scripts/ui/pause_panel.gd" id="4_pause"]
+
+[ext_resource type="PackedScene" path="res://scenes/ui/slot_panel.tscn" id="5_slots"]
 
 [ext_resource type="PackedScene" path="res://scenes/world/world.tscn" id="2_world"]
 
@@ -178,3 +180,5 @@ text = "重新开始"
 [node name="TitleButton" type="Button" parent="HUD/PausePanel/Margin/Rows"]
 theme_override_font_sizes/font_size = 18
 text = "回到标题"
+
+[node name="SlotPanel" parent="HUD" instance=ExtResource("5_slots")]

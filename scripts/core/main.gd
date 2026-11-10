@@ -18,9 +18,13 @@ const MAGIC := preload("res://scripts/magic/magic_facade.gd")
 @onready var spellbook_empty: Label = $HUD/Spellbook/Margin/Rows/EmptyHint
 @onready var boss_bar: ProgressBar = $HUD/BossBar
 @onready var boss_label: Label = $HUD/BossLabel
+@onready var slot_panel: Control = $HUD/SlotPanel
 
 ## One spell session per adventure (uniqueness + codex).
 var spell_session := SpellSession.new()
+
+## Which direction the slot panel acts in when a slot is chosen.
+var _slot_mode := "save"
 
 var _result_clear_timer: SceneTreeTimer
 
@@ -29,6 +33,7 @@ func _ready() -> void:
 	# Reparent the player into the world's y-sorted props layer so the
 	# player interleaves correctly with tree canopies while walking.
 	player.reparent($World.get_entity_parent(), true)
+	slot_panel.slot_chosen.connect(_on_slot_chosen)
 	# Camera clamps to the map rectangle so edges never show void.
 	var cam: Camera2D = player.get_node_or_null("Camera2D")
 	if cam != null:
@@ -50,7 +55,7 @@ func _ready() -> void:
 	# loaded once the whole scene is live, so toasts and restores land).
 	if GameManager.pending_load_session:
 		GameManager.pending_load_session = false
-		_do_load()
+		_do_load(GameManager.pending_load_slot)
 
 
 func _process(_delta: float) -> void:
@@ -61,12 +66,22 @@ func _process(_delta: float) -> void:
 	if Input.is_action_just_pressed("toggle_spellbook"):
 		spellbook.visible = not spellbook.visible
 	if Input.is_action_just_pressed("save_game"):
-		_do_save()
+		_slot_mode = "save"
+		slot_panel.open_save_mode()
 	if Input.is_action_just_pressed("load_game"):
-		_do_load()
+		_slot_mode = "load"
+		slot_panel.open_load_mode()
 	if Input.is_action_just_pressed("reset_world"):
 		_do_world_reset()
 	_update_boss_bar()
+
+
+## Slot-panel callback: write or restore the chosen slot.
+func _on_slot_chosen(slot: String) -> void:
+	if _slot_mode == "save":
+		_do_save(slot)
+	else:
+		_do_load(slot)
 
 
 ## Boss health bar: visible only while the Slime King is alive and
@@ -94,22 +109,24 @@ func _do_world_reset() -> void:
 	get_tree().reload_current_scene()
 
 
-func _do_save() -> void:
+func _do_save(slot: String) -> void:
 	var state := {
 		"player": {"x": player.global_position.x, "y": player.global_position.y,
 				"hp": player.hp, "mana": player.mana},
 		"session": spell_session.capture_state(),
 		"world": $World.capture_state(),
 	}
-	var result: Dictionary = SaveManager.save_game(state)
+	var meta := {"saved_at": Time.get_datetime_string_from_system(),
+			"summary": "生命 %d · 魔力 %d" % [roundi(player.hp), roundi(player.mana)]}
+	var result: Dictionary = SaveManager.save_game(state, slot, meta)
 	if result["ok"]:
-		_toast("冒险已记录（F9 读取）", true)
+		_toast("冒险已记录到%s（F9 读取）" % slot, true)
 	else:
 		_toast("保存失败：" + result["error"], false)
 
 
-func _do_load() -> void:
-	var result: Dictionary = SaveManager.load_game()
+func _do_load(slot: String) -> void:
+	var result: Dictionary = SaveManager.load_game(slot)
 	if not result["ok"]:
 		_toast("读取失败：" + result["error"], false)
 		return

@@ -1,8 +1,10 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/title.gd" id="1_title"]
 
 [ext_resource type="Script" path="res://scripts/ui/settings_panel.gd" id="7_settings"]
+
+[ext_resource type="PackedScene" path="res://scenes/ui/slot_panel.tscn" id="8_slots"]
 
 [ext_resource type="Texture2D" path="res://assets/sprites/props/tree_01.png" id="2_tree"]
 
@@ -210,3 +212,5 @@ size_flags_horizontal = 10
 theme_override_styles/normal = SubResource("title_btn")
 theme_override_font_sizes/font_size = 18
 text = "返回"
+
+[node name="SlotPanel" parent="." instance=ExtResource("8_slots")]

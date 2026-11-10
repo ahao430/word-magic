@@ -9,14 +9,22 @@ extends RefCounted
 
 const SAVE_VERSION := 1
 const SAVES_DIR := "user://saves"
+const SLOT_COUNT := 3
 
 
 static func slot_path(slot: String) -> String:
 	return "%s/%s/save.json" % [SAVES_DIR, slot]
 
 
-## Returns {"ok": bool, "error": String}.
-static func save_game(state: Dictionary, slot: String = "slot_01") -> Dictionary:
+static func slot_id(index: int) -> String:
+	return "slot_%02d" % index
+
+
+## Returns {"ok": bool, "error": String}. meta is a small display
+## payload (timestamp, summary) kept OUTSIDE the game state so UI can
+## show slot cards without loading game data.
+static func save_game(state: Dictionary, slot: String = "slot_01",
+		meta: Dictionary = {}) -> Dictionary:
 	# Create the full slot directory up front (user://saves/<slot>).
 	var dir_path := "%s/%s" % [SAVES_DIR, slot]
 	var mk_err := DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir_path))
@@ -24,7 +32,7 @@ static func save_game(state: Dictionary, slot: String = "slot_01") -> Dictionary
 		return {"ok": false, "error": "cannot create saves dir"}
 	var full := slot_path(slot)
 	var tmp := full + ".tmp"
-	var payload := {"version": SAVE_VERSION, "state": state}
+	var payload := {"version": SAVE_VERSION, "meta": meta, "state": state}
 	var file := FileAccess.open(tmp, FileAccess.WRITE)
 	if file == null:
 		return {"ok": false, "error": "cannot open tmp file"}
@@ -37,22 +45,48 @@ static func save_game(state: Dictionary, slot: String = "slot_01") -> Dictionary
 	return {"ok": true, "error": ""}
 
 
-## Returns {"ok": bool, "state": Dictionary, "error": String}.
+## Returns {"ok": bool, "state": Dictionary, "meta": Dictionary, "error": String}.
 static func load_game(slot: String = "slot_01") -> Dictionary:
 	var path := slot_path(slot)
 	if not FileAccess.file_exists(path):
-		return {"ok": false, "state": {}, "error": "no save"}
+		return {"ok": false, "state": {}, "meta": {}, "error": "no save"}
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		return {"ok": false, "state": {}, "error": "cannot open"}
+		return {"ok": false, "state": {}, "meta": {}, "error": "cannot open"}
 	var parsed = JSON.parse_string(file.get_as_text())
 	file.close()
 	if parsed == null or not parsed is Dictionary:
-		return {"ok": false, "state": {}, "error": "corrupted save"}
+		return {"ok": false, "state": {}, "meta": {}, "error": "corrupted save"}
 	var version: int = int(parsed.get("version", 0))
 	if version != SAVE_VERSION:
-		return {"ok": false, "state": {}, "error": "unsupported version %d" % version}
-	return {"ok": true, "state": parsed.get("state", {}), "error": ""}
+		return {"ok": false, "state": {}, "meta": {},
+				"error": "unsupported version %d" % version}
+	return {"ok": true, "state": parsed.get("state", {}),
+			"meta": parsed.get("meta", {}), "error": ""}
+
+
+static func slot_exists(slot: String) -> bool:
+	return FileAccess.file_exists(slot_path(slot))
+
+
+## Returns {"ok": bool, "error": String}.
+static func delete_slot(slot: String) -> Dictionary:
+	if not slot_exists(slot):
+		return {"ok": true, "error": ""}
+	var err := DirAccess.remove_absolute(ProjectSettings.globalize_path(slot_path(slot)))
+	if err != OK:
+		return {"ok": false, "error": "delete failed (%d)" % err}
+	return {"ok": true, "error": ""}
+
+
+## Occupied slots in fixed order (slot_01..slot_N).
+static func list_slots() -> Array[String]:
+	var out: Array[String] = []
+	for i in range(1, SLOT_COUNT + 1):
+		var s := slot_id(i)
+		if slot_exists(s):
+			out.append(s)
+	return out
 
 
 ## --- Permanent world memory (tier 1, AGENTS.md §11) ---

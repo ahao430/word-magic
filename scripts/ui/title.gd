@@ -8,6 +8,7 @@ extends Control
 @onready var settings_button: Button = $Margin/Rows/SettingsButton
 @onready var quit_button: Button = $Margin/Rows/QuitButton
 @onready var settings_panel: Control = $SettingsPanel
+@onready var slot_panel: Control = $SlotPanel
 
 
 func _ready() -> void:
@@ -17,13 +18,15 @@ func _ready() -> void:
 	Music.play("explore_loop")
 	# "Continue" only lights up when a session save exists; a disabled
 	# button must also leave the keyboard focus chain.
-	continue_button.disabled = not FileAccess.file_exists(SaveManager.slot_path("slot_01"))
+	continue_button.disabled = SaveManager.list_slots().is_empty()
 	if continue_button.disabled:
 		continue_button.focus_mode = Control.FOCUS_NONE
 	start_button.pressed.connect(_on_start)
 	continue_button.pressed.connect(_on_continue)
 	settings_button.pressed.connect(_on_settings)
 	quit_button.pressed.connect(func() -> void: get_tree().quit())
+	slot_panel.slot_chosen.connect(_on_slot_chosen)
+	slot_panel.closed.connect(func() -> void: continue_button.grab_focus())
 	# Keyboard navigation: land on the first action, arrows/Enter take over.
 	start_button.grab_focus()
 
@@ -32,11 +35,16 @@ func _on_settings() -> void:
 	settings_panel.open()
 
 
-func _on_start() -> void:
-	GameManager.pending_load_session = false
+func _on_continue() -> void:
+	slot_panel.open_load_mode()
+
+
+func _on_slot_chosen(slot: String) -> void:
+	GameManager.pending_load_session = true
+	GameManager.pending_load_slot = slot
 	get_tree().change_scene_to_file("res://scenes/main/main.tscn")
 
 
-func _on_continue() -> void:
-	GameManager.pending_load_session = true
+func _on_start() -> void:
+	GameManager.pending_load_session = false
 	get_tree().change_scene_to_file("res://scenes/main/main.tscn")
