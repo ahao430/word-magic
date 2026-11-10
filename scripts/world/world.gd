@@ -331,6 +331,16 @@ func _spawn_prop(prefix: String, cell: Vector2i, variant: int, tex_name: String,
 	collider.shape = shape
 	collider.position = shape_offset
 	body.add_child(collider)
+	# Soft ground shadow first so the prop renders on top of it.
+	var shadow := Sprite2D.new()
+	shadow.texture = load("res://assets/sprites/effects/shadow_16x8.png")
+	shadow.modulate = Color(1, 1, 1, 0.7)
+	shadow.position = Vector2(0, -2)
+	if prefix == "Tree":
+		shadow.scale = Vector2(2.2, 1.1)
+	else:
+		shadow.scale = Vector2(1.4, 0.9)
+	body.add_child(shadow)
 	var sprite := Sprite2D.new()
 	sprite.texture = load("res://assets/sprites/props/%s.png" % tex_name)
 	sprite.position = Vector2(0, -sprite.texture.get_height() * 0.5)

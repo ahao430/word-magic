@@ -7,7 +7,9 @@ const MAGIC := preload("res://scripts/magic/magic_facade.gd")
 
 @onready var player: CharacterBody2D = $Player
 @onready var mana_bar: ProgressBar = $HUD/ManaBar
+@onready var mana_label: Label = $HUD/ManaLabel
 @onready var hp_bar: ProgressBar = $HUD/HpBar
+@onready var hp_label: Label = $HUD/HpLabel
 @onready var cast_result: Label = $HUD/CastResult
 @onready var cast_input: LineEdit = $HUD/CastInput
 @onready var spellbook: PanelContainer = $HUD/Spellbook
@@ -30,6 +32,8 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	mana_bar.value = player.mana
 	hp_bar.value = player.hp
+	mana_label.text = "魔力 %d/100" % roundi(player.mana)
+	hp_label.text = "生命 %d/%d" % [roundi(player.hp), roundi(player.HP_MAX)]
 	if Input.is_action_just_pressed("toggle_spellbook"):
 		spellbook.visible = not spellbook.visible
 	if Input.is_action_just_pressed("save_game"):

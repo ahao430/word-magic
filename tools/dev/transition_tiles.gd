@@ -36,14 +36,19 @@ static func generate() -> Array[Image]:
 
 static func _build_tile(mask: int, grass: Image, dirt: Image) -> Image:
 	var img := Image.create(TILE, TILE, false, Image.FORMAT_RGBA8)
+	# Per-mask amplitude jitter breaks the "every tile wobbles the same"
+	# look of a single shared noise calibration.
+	var amp := NOISE_AMP * (0.8 + 0.4 * _hash(mask, 3, 555))
 	for y in TILE:
 		for x in TILE:
-			var v := _bias(mask, x, y) + _noise(x, y, mask) * NOISE_AMP
+			var v := _bias(mask, x, y) + _noise(x, y, mask) * amp
 			var px: Color
 			if v > THRESH + DITHER:
 				px = grass.get_pixel(x, y)
 			elif v > THRESH - DITHER:
-				px = grass.get_pixel(x, y) if _noise(x, y, mask + 101) > 0.0 else dirt.get_pixel(x, y)
+				# 2px horizontal runs make the dither wander instead of
+				# salt-and-peppering (reads as torn turf, not static).
+				px = grass.get_pixel(x, y) if _noise(int(x * 0.5) * 2, y, mask + 101) > 0.0 else dirt.get_pixel(x, y)
 			else:
 				px = dirt.get_pixel(x, y)
 			img.set_pixel(x, y, px)

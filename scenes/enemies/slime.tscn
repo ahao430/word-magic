@@ -1,8 +1,10 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/enemies/slime.gd" id="1_slime"]
 
 [ext_resource type="SpriteFrames" path="res://assets/sprites/enemies/slime_frames.tres" id="2_frames"]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/effects/shadow_16x8.png" id="3_shadow"]
 
 [sub_resource type="RectangleShape2D" id="shape_slime"]
 size = Vector2(18, 14)
@@ -13,6 +15,11 @@ collision_layer = 4
 collision_mask = 1
 motion_mode = 1
 script = ExtResource("1_slime")
+
+[node name="Shadow" type="Sprite2D" parent="."]
+modulate = Color(1, 1, 1, 0.7)
+position = Vector2(0, 2)
+texture = ExtResource("3_shadow")
 
 [node name="SlimeSprite" type="AnimatedSprite2D" parent="."]
 sprite_frames = ExtResource("2_frames")

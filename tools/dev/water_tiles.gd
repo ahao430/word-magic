@@ -47,17 +47,17 @@ static func _surface(variant: int) -> Image:
 	for y in TILE:
 		for x in TILE:
 			var c := MID
-			# Two horizontal wavy light bands.
-			var band1 := 8.0 + 3.0 * sin(x * 0.45 + band_phase)
-			var band2 := 22.0 + 3.0 * sin(x * 0.38 + band_phase * 1.7)
-			if absf(y - band1) < 1.2 or absf(y - band2) < 1.2:
+			# Two horizontal wavy light bands (gentler frequency).
+			var band1 := 9.0 + 2.5 * sin(x * 0.30 + band_phase)
+			var band2 := 22.0 + 2.5 * sin(x * 0.26 + band_phase * 1.6)
+			if absf(y - band1) < 1.4 or absf(y - band2) < 1.4:
 				c = LIGHT
 			# Occasional deep ripple shadow between the bands.
 			if y == int(band1) + 3 and _hash(x, y, seed + 3) > 0.55:
 				c = DEEP
 			img.set_pixel(x, y, c)
-	# Sparkles: sparse near-white shallow pixels on the upper band.
-	for i in 5 + variant:
+	# Sparkles: denser near-white shallow glints across the upper half.
+	for i in 9 + variant * 2:
 		var sx := int(_hash(i, 1, seed) * (TILE - 2)) + 1
 		var sy := int(_hash(i, 2, seed) * (TILE / 2)) + 2
 		img.set_pixel(sx, sy, SHALLOW)
@@ -87,9 +87,9 @@ static func _shore(mask: int, grass: Image) -> Image:
 
 
 static func _on_light_band(x: int, y: int) -> bool:
-	var band1 := 8.0 + 3.0 * sin(x * 0.45)
-	var band2 := 22.0 + 3.0 * sin(x * 0.38 * 1.7)
-	return absf(y - band1) < 1.2 or absf(y - band2) < 1.2
+	var band1 := 9.0 + 2.5 * sin(x * 0.30)
+	var band2 := 22.0 + 2.5 * sin(x * 0.26 * 1.6)
+	return absf(y - band1) < 1.4 or absf(y - band2) < 1.4
 
 
 static func _bias(mask: int, x: int, y: int) -> float:

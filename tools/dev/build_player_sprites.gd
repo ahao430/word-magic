@@ -61,13 +61,14 @@ func _front_back(face: bool, phase: int) -> Image:
 			elif d <= 5.2:
 				_px(img, x, y, ROBE_LIGHT if y - bob < 12 else ROBE_MID)
 	if face:
-		# Face patch + eyes inside the hood.
+		# Face patch + eyes inside the hood (eyes one pixel closer than
+		# before: the wide gap read as startled).
 		for y in range(11 - bob, 19 - bob):
 			for x in range(11, 21):
 				if Vector2((x - 16.0) / 3.6, (y - 15.0 + bob) / 3.0).length() <= 1.0:
 					_px(img, x, y, SKIN)
-		_px(img, 14, 15 - bob, EYE)
-		_px(img, 19, 15 - bob, EYE)
+		_px(img, 15, 15 - bob, EYE)
+		_px(img, 18, 15 - bob, EYE)
 		_px(img, 16, 22 - bob, CLASP)
 		_px(img, 16, 23 - bob, CLASP)
 	else:

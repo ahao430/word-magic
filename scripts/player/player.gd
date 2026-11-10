@@ -51,6 +51,10 @@ func take_damage(amount: float, from_dir: Vector2) -> void:
 	hp -= amount
 	_invuln_timer = INVULN_TIME
 	Sfx.play("sfx_hurt")
+	# Red flash on top of the invulnerability blink.
+	sprite.modulate = Color(1.8, 0.45, 0.45)
+	var tween := create_tween()
+	tween.tween_property(sprite, "modulate", Color.WHITE, 0.25)
 	# Small knockback away from the attacker.
 	global_position += from_dir * 6.0
 	if hp <= 0.0:
