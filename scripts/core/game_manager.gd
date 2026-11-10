@@ -8,6 +8,10 @@ enum GameState { BOOT, MENU, PLAYING, PAUSED }
 
 var state: GameState = GameState.BOOT
 
+## Set by the title screen's "continue" button; main.gd consumes it on
+## _ready and loads the last session save instead of a fresh adventure.
+var pending_load_session := false
+
 
 func set_state(new_state: GameState) -> void:
 	if new_state == state:

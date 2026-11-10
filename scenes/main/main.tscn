@@ -1,6 +1,8 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/core/main.gd" id="1_main"]
+
+[ext_resource type="Script" path="res://scripts/ui/pause_panel.gd" id="4_pause"]
 
 [ext_resource type="PackedScene" path="res://scenes/world/world.tscn" id="2_world"]
 
@@ -140,3 +142,39 @@ offset_right = 840.0
 offset_bottom = 700.0
 placeholder_text = "输入咒语（如：火球术），回车施法"
 alignment = 1
+
+[node name="PausePanel" type="PanelContainer" parent="HUD"]
+visible = false
+process_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -130.0
+offset_top = -110.0
+offset_right = 130.0
+offset_bottom = 110.0
+script = ExtResource("4_pause")
+
+[node name="Margin" type="MarginContainer" parent="HUD/PausePanel"]
+
+[node name="Rows" type="VBoxContainer" parent="HUD/PausePanel/Margin"]
+theme_override_constants/separation = 14
+
+[node name="PausedLabel" type="Label" parent="HUD/PausePanel/Margin/Rows"]
+theme_override_font_sizes/font_size = 26
+text = "暂停"
+horizontal_alignment = 1
+
+[node name="ResumeButton" type="Button" parent="HUD/PausePanel/Margin/Rows"]
+theme_override_font_sizes/font_size = 18
+text = "继续"
+
+[node name="RestartButton" type="Button" parent="HUD/PausePanel/Margin/Rows"]
+theme_override_font_sizes/font_size = 18
+text = "重新开始"
+
+[node name="TitleButton" type="Button" parent="HUD/PausePanel/Margin/Rows"]
+theme_override_font_sizes/font_size = 18
+text = "回到标题"

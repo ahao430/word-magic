@@ -38,6 +38,11 @@ func _ready() -> void:
 	# busy root reject add_child.
 	await get_tree().process_frame
 	Music.play("explore_loop")
+	# Title-screen "continue" hands off through this flag (the save is
+	# loaded once the whole scene is live, so toasts and restores land).
+	if GameManager.pending_load_session:
+		GameManager.pending_load_session = false
+		_do_load()
 
 
 func _process(_delta: float) -> void:

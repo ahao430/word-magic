@@ -28,7 +28,6 @@ func _ready() -> void:
 
 	var main: Node2D = load("res://scenes/main/main.tscn").instantiate()
 	add_child(main)
-
 	await RenderingServer.frame_post_draw
 	await RenderingServer.frame_post_draw
 	_capture(SHOT_A)
@@ -108,6 +107,15 @@ func _ready() -> void:
 		await RenderingServer.frame_post_draw
 	_capture("/tmp/wm_boss_aggro.png")
 	print("[shot] boss aggro saved")
+
+	# Pause overlay: show the panel exactly as Esc would.
+	var pause_panel: PanelContainer = main.get_node("HUD/PausePanel")
+	pause_panel.visible = true
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	_capture("/tmp/wm_pause.png")
+	print("[shot] pause saved")
+	pause_panel.visible = false
 
 	var boss: Node2D = main.get_node("World").get_boss()
 	if boss != null and is_instance_valid(boss):
