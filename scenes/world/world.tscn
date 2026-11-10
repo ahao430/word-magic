@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="TileSet" path="res://assets/tilesets/forest/forest_ground.tres" id="1_tileset"]
+
+[ext_resource type="Script" path="res://scripts/world/world.gd" id="2_world"]
+
+[node name="World" type="Node2D"]
+script = ExtResource("2_world")
+
+[node name="GroundLayer" type="TileMapLayer" parent="."]
+tile_set = ExtResource("1_tileset")

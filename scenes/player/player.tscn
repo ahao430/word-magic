@@ -1,0 +1,25 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
+
+[sub_resource type="RectangleShape2D" id="shape_body"]
+size = Vector2(16, 16)
+
+[node name="Player" type="CharacterBody2D"]
+motion_mode = 1
+script = ExtResource("1_player")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("shape_body")
+
+[node name="Body" type="Polygon2D" parent="."]
+color = Color(0.29, 0.38, 0.55, 1)
+polygon = PackedVector2Array(-8, -12, 8, -12, 8, 8, 4, 12, -4, 12, -8, 8)
+
+[node name="Facing" type="Polygon2D" parent="."]
+color = Color(1, 0.82, 0.4, 1)
+polygon = PackedVector2Array(-3, -4, 5, 0, -3, 4)
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position_smoothing_enabled = true
+position_smoothing_speed = 8.0
