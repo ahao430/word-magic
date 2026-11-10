@@ -136,6 +136,22 @@
 投射物经 `Sfx.impact_sound_for` 按元素选音）；法术图鉴升级（ScrollContainer 滚动 +
 筛选框：名称/元素（原始或中文）实时过滤 + 空态提示；`tests/spellbook_test.gd` 11 项）。
 已知打磨项：预警圈填充可再偏红、末段 0.3s 可加深提示逃生窗口关闭。
+
+### 5.7 法术形状执行器（2026-11-11 完成）
+
+白名单 8 形状中 4 个已实装（`scripts/magic/spell_executor.gd` 分派）：
+**projectile**（投射物）/ **explosion**（`blast.gd`：落点玩家前方 96px，一次性 AOE，
+冲击环按元素调色）/ **field**（`field_zone.gd`：以施法者为中心的持续盘，0.5s tick
+伤害 + freeze 机制）/ **tornado**（同 zone：0.4s tick + 420 冲量 apply_push，
+敌人短暂失控被吹飞）。area/beam/shield/summon 保持"未觉醒"退款语义。
+敌人新增 `apply_freeze`（冻结定身、冰蓝贴图、免疫接触伤害）与 `apply_push`
+（吹起失控 0.25s）——冰封千里可把史莱姆王冻停在技能循环中。
+特效贴图 `blast_ring_64` / `field_zone_128` 白色基底运行时调色
+（`tools/dev/build_effect_sprites.gd`）。
+测试：`tests/shapes_test.gd` 13 项全过（爆炸秒杀/玩家自身免疫/冻结定身不动/
+狂风净推 255px/区域到期自清/未实现形状退款不进图鉴）。排查记：blast 需两物理帧
+才报告 overlap 且场景须自建碰撞形状；tornado 推力曾连续被追逐 AI 压制——
+根因是测试摆位落在前一咒语 field 的冻结半径内（冻结正确优先于击退）。
 4. **物件层** ✅（2026-11-11 首批完成）：树（32×48 ×2 变体）、岩石（24×18 ×2）、
    灌木（20×14 ×2，无碰撞）由 `tools/dev/build_prop_sprites.gd` 程序化生成——
    色板按亮度分位数从生产地块采样（grass_dense/dirt_variant/stone_paving），
@@ -167,6 +183,7 @@
 | **引擎内平铺验证**（2026-11-11） | Godot 4.7.2 Metal 渲染 10×10 拼块截图 | 全不透明 ✅ / Nearest 锐利 ✅ / 白边无 ✅ / 网格对齐 ✅；瓦片间接缝为已知原型限制 |
 | **Boss 精灵**（2026-11-11） | 程序化像素校验 + 实机截图 AI 视觉复核 | 尺寸/Alpha/王冠 88px/红宝石/双高光 ✅；血条金色无遮挡、死亡后隐藏 ✅ |
 | **重砸预警圈**（2026-11-11 打磨轮） | 像素扫描（中心区 2689 红像素成环）+ AI 视觉复核 | 圈可见且明确读作危险区（三轮迭代：负 z 被地块遮挡 → 时机/强度 → 填充+脉冲）✅ |
+| **法术形状特效**（2026-11-11） | shapes_test 13 项 + 行为断言 | 爆炸/领域/龙卷行为与自清 ✅；冻结与吹飞机制生效 ✅ |
 
 > 引擎验证环境：Godot 4.7.2.stable（Homebrew），场景 `scenes/dev/ground_tile_test.tscn`。
 > 参考素材目录 `assets/source/generated/` 含 `.gdignore`，不进入引擎导入管线（避免 47MB 参考图污染资源库）。

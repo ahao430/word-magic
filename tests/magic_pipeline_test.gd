@@ -80,22 +80,34 @@ func _run() -> void:
 	var r2: Dictionary = MagicFacade.cast("神秘乱语", player, world, session)
 	_expect(not r2["ok"] and r2["reason"] == "unknown", "unknown phrase rejected gracefully")
 
+	# Implemented non-projectile shape: executes and records like any
+	# spell; a repeat is a mechanism duplicate, not not_unlocked.
+	var r3: Dictionary = MagicFacade.cast("风卷残云", player, world, session)
+	_expect(r3["ok"], "tornado shape executes now (%s)" % r3["message"])
+	var r3b: Dictionary = MagicFacade.cast("风卷残云", player, world, session)
+	_expect(not r3b["ok"] and r3b["reason"].begins_with("duplicate"),
+			"implemented cast records as duplicate on retry (%s)" % r3b["reason"])
+	_expect(session.codex.size() == 2, "codex holds projectile + tornado")
+
 	# Unimplemented shape: refunded AND not recorded, so retrying it is
 	# still the same not_unlocked answer rather than a duplicate.
-	var r3: Dictionary = MagicFacade.cast("风卷残云", player, world, session)
-	_expect(not r3["ok"] and r3["reason"] == "not_unlocked",
-			"unimplemented shape refunded with message (%s)" % r3["message"])
-	var r3b: Dictionary = MagicFacade.cast("风卷残云", player, world, session)
-	_expect(not r3b["ok"] and r3b["reason"] == "not_unlocked",
+	var shield_draft := LocalSpellRegistry.lookup("火球术").duplicate(true)
+	shield_draft["shape"] = "shield"
+	SpellCache.store("守护之壁", "守护之壁", shield_draft)
+	var r4: Dictionary = MagicFacade.cast("守护之壁", player, world, session)
+	_expect(not r4["ok"] and r4["reason"] == "not_unlocked",
+			"unimplemented shape refunded with message (%s)" % r4["message"])
+	var r4b: Dictionary = MagicFacade.cast("守护之壁", player, world, session)
+	_expect(not r4b["ok"] and r4b["reason"] == "not_unlocked",
 			"failed casts are not recorded as duplicates")
-	_expect(session.codex.size() == 1, "codex still holds one entry")
+	_expect(session.codex.size() == 2, "codex unchanged by refused shape")
 
 	# Low mana on a FRESH session so uniqueness does not mask the check.
 	var fresh := SpellSession.new()
 	var mana_before: float = player.mana
 	player.mana = 3.0
-	var r4: Dictionary = MagicFacade.cast("火球术", player, world, fresh)
-	_expect(not r4["ok"] and r4["reason"] == "no_mana", "low mana blocks cast")
+	var r5: Dictionary = MagicFacade.cast("火球术", player, world, fresh)
+	_expect(not r5["ok"] and r5["reason"] == "no_mana", "low mana blocks cast")
 	player.mana = mana_before
 
 	TestIsolation.unstash(TestIsolation.CACHE_PATH, _cache_backup)

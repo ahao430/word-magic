@@ -17,12 +17,29 @@ var hp := MAX_HP
 var _wander_dir := Vector2.ZERO
 var _wander_timer := 0.0
 var _knockback := Vector2.ZERO
+var _freeze_timer := 0.0
+var _push_timer := 0.0
 var _player: Node2D = null
 
 @onready var sprite: AnimatedSprite2D = $SlimeSprite
 
 
 func _physics_process(delta: float) -> void:
+	if _freeze_timer > 0.0:
+		# Frozen: rooted in place, frosted over, and too stiff to bite.
+		_freeze_timer -= delta
+		velocity = Vector2.ZERO
+		_knockback = Vector2.ZERO
+		sprite.modulate = Color(0.55, 0.8, 1.25)
+		move_and_slide()
+		return
+	if _push_timer > 0.0:
+		# Blown off its feet: momentum only, no steering while airborne.
+		_push_timer -= delta
+		velocity = _knockback
+		_knockback = _knockback.move_toward(Vector2.ZERO, 600.0 * delta)
+		move_and_slide()
+		return
 	_player = _find_player()
 	var move := Vector2.ZERO
 	if _player != null:
@@ -53,6 +70,19 @@ func take_damage(amount: float, from_dir: Vector2) -> void:
 	tween.tween_property(sprite, "modulate", Color.WHITE, 0.18)
 	if hp <= 0.0:
 		_die()
+
+
+## Freeze mechanic (冰封千里): root the slime in place for a while.
+## While frozen the sprite stays frosted; thawing restores normal tint.
+func apply_freeze(duration: float) -> void:
+	_freeze_timer = maxf(_freeze_timer, duration)
+
+
+## Gale mechanic (风卷残云): a shove that also takes the slime off its
+## feet — momentum only while the gust carries it.
+func apply_push(force: Vector2) -> void:
+	_knockback += force
+	_push_timer = maxf(_push_timer, 0.25)
 
 
 func _die() -> void:

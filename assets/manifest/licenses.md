@@ -23,6 +23,7 @@
 | 音效 ×13（施法/命中/爆炸/受伤/机关/Boss 落地与死亡/元素受击 冰·雷·风） | `assets/audio/sfx/*.tres` | 程序化合成（`tools/dev/build_sfx.gd`，AudioStreamWAV 正弦/噪声合成） | 程序化生成（无外部来源） | 无需 | 无 | 确定性合成，可复现 |
 | 柔和阴影精灵 | `assets/sprites/effects/shadow_16x8.png` | 程序化合成（`tools/dev/build_shadow_sprite.gd`） | 同上 | 无需 | 无 | 径向 Alpha 渐变椭圆 |
 | 瀑布纹理（滚动动画用） | `assets/sprites/effects/waterfall_32x64.png` | 程序化合成（`tools/dev/build_waterfall_sprite.gd`，垂直可平铺） | 同上 | 无需 | 无 | 纵向条纹 + 64px 周期无缝衔接 |
+| 法术特效贴图 ×2（冲击环/领域盘，白色运行时调色） | `assets/sprites/effects/blast_ring_64.png`、`field_zone_128.png` | 程序化合成（`tools/dev/build_effect_sprites.gd`） | 同上 | 无需 | 无 | 白色基底 + 真 Alpha，ELEMENT_TINT 调制 |
 | 探索 BGM（24s 循环） | `assets/audio/music/explore_loop.tres` | 程序化合成（`tools/dev/build_bgm.gd`，和弦铺底+五声琶音） | 同上 | 无需 | 无 | 确定性合成，LOOP_FORWARD |
 | 概念图集（13 张） | `assets/source/generated/concept_atlases/` | AI 图像生成服务 | pending | 未确认 | 无 | 未修改，仅作参考 |
 | 地形过渡参考 | `assets/source/generated/forest_transitions_ref/` | AI 图像生成服务 | pending | 未确认 | 无 | 未修改，仅作参考 |

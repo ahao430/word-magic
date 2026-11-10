@@ -35,6 +35,7 @@ var _dash_dir := Vector2.ZERO
 var _player: Node2D = null
 var _visual_tween: Tween = null
 var _ring_tween: Tween = null
+var _freeze_timer := 0.0
 
 
 @onready var sprite: AnimatedSprite2D = $BossSprite
@@ -43,6 +44,13 @@ var _ring_tween: Tween = null
 
 func _physics_process(delta: float) -> void:
 	if not alive:
+		return
+	if _freeze_timer > 0.0:
+		# Frozen mid-cycle: the timer runs, the king does not.
+		_freeze_timer -= delta
+		velocity = Vector2.ZERO
+		sprite.modulate = Color(0.55, 0.8, 1.25)
+		move_and_slide()
 		return
 	_player = _find_player()
 	_state_timer -= delta
@@ -97,6 +105,17 @@ func take_damage(amount: float, from_dir: Vector2) -> void:
 	flash.tween_property(sprite, "modulate", Color.WHITE, 0.18)
 	if hp <= 0.0:
 		_die()
+
+
+## Freeze mechanic (冰封千里): pauses the skill cycle; thaw resumes it.
+func apply_freeze(duration: float) -> void:
+	_freeze_timer = maxf(_freeze_timer, duration)
+
+
+## Gale mechanic (风卷残云): the king is too heavy to shove far, but a
+## stagger nudge keeps the fantasy consistent.
+func apply_push(force: Vector2) -> void:
+	global_position += force.normalized() * 4.0
 
 
 ## Area damage on landing: one hit to everything close by (the player's
