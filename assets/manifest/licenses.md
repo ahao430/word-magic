@@ -13,6 +13,7 @@
 | 过渡 Tile 图集（16 格程序化合成） | `assets/tilesets/forest/ground/forest_ground_atlas.png`（行 2-5） | 程序化合成自生产地块（`tools/dev/transition_tiles.gd`） | 同上 | 未确认 | 无 | 以 grass_dense / dirt_plain 像素为源的程序化派生 |
 | 森林物件精灵（树/岩/灌木 ×6） | `assets/sprites/props/*.png` | 程序化合成（`tools/dev/build_prop_sprites.gd`，色板采样自生产地块） | 同上 | 未确认 | 无 | 程序化派生，真 Alpha 裁切 |
 | 水面/河岸 Tile（20 格程序化合成） | `assets/tilesets/forest/ground/forest_ground_atlas.png`（行 6-10） | 程序化合成（`tools/dev/water_tiles.gd`；蓝色色板采样自 forest_water_reference.png） | 同上 | 未确认 | 无 | 仅采样参考图颜色，不复制像素 |
+| 玩家角色精灵（12 帧 + SpriteFrames） | `assets/sprites/player/*.png`、`player_frames.tres` | 程序化合成（`tools/dev/build_player_sprites.gd`） | 同上 | 未确认 | 无 | 程序化生成，真 Alpha 裁切 |
 | 概念图集（13 张） | `assets/source/generated/concept_atlases/` | AI 图像生成服务 | pending | 未确认 | 无 | 未修改，仅作参考 |
 | 地形过渡参考 | `assets/source/generated/forest_transitions_ref/` | AI 图像生成服务 | pending | 未确认 | 无 | 未修改，仅作参考 |
 | 水域参考 ×2 | `assets/source/generated/forest_water_ref/` | AI 图像生成服务 | pending | 未确认 | 无 | 未修改，仅作参考 |

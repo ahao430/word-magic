@@ -1,11 +1,13 @@
 extends CharacterBody2D
-## Top-down player: four-direction movement with camera smoothing.
-## Visuals are code-defined placeholder polygons until real character
-## sprites are produced (see docs/ART_ASSET_IMPLEMENTATION.md §5).
+## Top-down player: four-direction movement with camera smoothing and
+## directional idle/walk animations. Sprite feet sit on the body origin
+## so y-sorting matches the props layer.
 
 const SPEED := 160.0
 
-@onready var facing: Polygon2D = $Facing
+@onready var sprite: AnimatedSprite2D = $PlayerSprite
+
+var _facing := "down"
 
 
 func _physics_process(_delta: float) -> void:
@@ -13,5 +15,19 @@ func _physics_process(_delta: float) -> void:
 	velocity = dir * SPEED
 	move_and_slide()
 	if dir != Vector2.ZERO:
-		facing.position = dir * 14.0
-		facing.rotation = dir.angle()
+		_facing = _facing_from(dir)
+		_play("walk_" + _facing)
+	else:
+		_play("idle_" + _facing)
+
+
+func _facing_from(dir: Vector2) -> String:
+	# Horizontal wins ties so diagonal input keeps a clear profile view.
+	if absf(dir.x) >= absf(dir.y):
+		return "right" if dir.x > 0.0 else "left"
+	return "down" if dir.y > 0.0 else "up"
+
+
+func _play(anim_name: String) -> void:
+	if sprite.animation != anim_name or not sprite.is_playing():
+		sprite.play(anim_name)
