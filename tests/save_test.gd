@@ -8,6 +8,9 @@ extends SceneTree
 const SLOT := "slot_test"
 
 var _failures := 0
+## World memory isolation: the rune activation in here persists a
+## permanent event — back up / clear / restore the real file.
+var _memory_backup := ""
 
 
 func _initialize() -> void:
@@ -15,6 +18,13 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_memory_backup = ""
+	if FileAccess.file_exists(SaveManager.WORLD_MEMORY_PATH):
+		var mf := FileAccess.open(SaveManager.WORLD_MEMORY_PATH, FileAccess.READ)
+		_memory_backup = mf.get_as_text()
+		mf.close()
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveManager.WORLD_MEMORY_PATH))
+	WorldMemory.reset()
 	# --- SaveManager unit: roundtrip ---
 	var sample := {"a": 1, "b": "文字", "nested": {"c": [1, 2, 3]}}
 	var s1: Dictionary = SaveManager.save_game(sample, SLOT)
@@ -132,6 +142,15 @@ func _run() -> void:
 	var recast: Dictionary = MagicFacade.cast("火球术", player2, world2, session2)
 	_expect(not recast["ok"] and recast["reason"].begins_with("duplicate_"),
 			"used spells stay spent after reload (%s)" % recast["reason"])
+
+	# Restore the developer's real world-memory file.
+	if _memory_backup != "":
+		var rf := FileAccess.open(SaveManager.WORLD_MEMORY_PATH, FileAccess.WRITE)
+		rf.store_string(_memory_backup)
+		rf.close()
+	else:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveManager.WORLD_MEMORY_PATH))
+	WorldMemory.reset()
 
 	_finish()
 

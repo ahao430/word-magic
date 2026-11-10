@@ -48,6 +48,8 @@ func _process(_delta: float) -> void:
 		_do_save()
 	if Input.is_action_just_pressed("load_game"):
 		_do_load()
+	if Input.is_action_just_pressed("reset_world"):
+		_do_world_reset()
 	_update_boss_bar()
 
 
@@ -63,6 +65,17 @@ func _update_boss_bar() -> void:
 		show_bar = true
 	boss_bar.visible = show_bar
 	boss_label.visible = show_bar
+
+
+## F8 dev reset: forget permanent world progress (world memory file)
+## and rebuild the scene from seed. Session save is untouched.
+func _do_world_reset() -> void:
+	var result: Dictionary = WorldMemory.clear_persisted()
+	if not result["ok"]:
+		_toast("世界记忆清除失败：" + result["error"], false)
+		return
+	GameManager.log_info("world memory cleared; rebuilding world from seed")
+	get_tree().reload_current_scene()
 
 
 func _do_save() -> void:

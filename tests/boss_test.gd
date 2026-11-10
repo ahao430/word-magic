@@ -9,9 +9,34 @@ var _failures := 0
 ## flags through this dict (captured by reference).
 var _flags := {}
 
+## World memory isolation: the boss dies in here, which persists a
+## permanent event — back up / clear / restore the real file so the
+## dev machine's meta-progress is untouched.
+var _memory_backup := ""
+
 
 func _flag(name: String) -> void:
 	_flags[name] = true
+
+
+func _backup_memory() -> void:
+	_memory_backup = ""
+	if FileAccess.file_exists(SaveManager.WORLD_MEMORY_PATH):
+		var f := FileAccess.open(SaveManager.WORLD_MEMORY_PATH, FileAccess.READ)
+		_memory_backup = f.get_as_text()
+		f.close()
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveManager.WORLD_MEMORY_PATH))
+	WorldMemory.reset()
+
+
+func _restore_memory() -> void:
+	if _memory_backup != "":
+		var f := FileAccess.open(SaveManager.WORLD_MEMORY_PATH, FileAccess.WRITE)
+		f.store_string(_memory_backup)
+		f.close()
+	else:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveManager.WORLD_MEMORY_PATH))
+	WorldMemory.reset()
 
 
 func _initialize() -> void:
@@ -19,6 +44,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_backup_memory()
 	# --- Sprites: dimensions, alpha cutout, crown, highlight, frames ---
 	var f1: Image = load("res://assets/sprites/enemies/boss_slime_idle_01.png").get_image()
 	var f2: Image = load("res://assets/sprites/enemies/boss_slime_idle_02.png").get_image()
@@ -152,6 +178,9 @@ func _run() -> void:
 	_expect(not is_instance_valid(seat), "boss node freed after death tween")
 
 	# --- Restore: living boss re-seated at hp/position; dead boss removed ---
+	# The mid-test death persisted EVENT_BOSS; clear it so these worlds
+	# boot with the boss present (session restore is under test here).
+	WorldMemory.reset()
 	var w2: Node2D = load("res://scenes/world/world.tscn").instantiate()
 	root.add_child(w2)
 	await physics_frame
@@ -174,6 +203,7 @@ func _run() -> void:
 	# Free everything we staged so the exit leak report stays clean.
 	for child in root.get_children():
 		child.free()
+	_restore_memory()
 	_finish()
 
 

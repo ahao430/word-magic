@@ -13,8 +13,21 @@ const SHOT_E := "/tmp/wm_gameplay_puzzle.png"
 
 const MAGIC := preload("res://scripts/magic/magic_facade.gd")
 
+## This dev scene kills the boss and builds the ford — both persist to
+## the real world-memory file now. Back it up and restore it so the
+## screenshot run never touches the developer's meta-progress.
+var _memory_backup := ""
+
 
 func _ready() -> void:
+	_memory_backup = ""
+	if FileAccess.file_exists(SaveManager.WORLD_MEMORY_PATH):
+		var mf := FileAccess.open(SaveManager.WORLD_MEMORY_PATH, FileAccess.READ)
+		_memory_backup = mf.get_as_text()
+		mf.close()
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveManager.WORLD_MEMORY_PATH))
+	WorldMemory.reset()
+
 	var main: Node2D = load("res://scenes/main/main.tscn").instantiate()
 	add_child(main)
 
@@ -110,7 +123,18 @@ func _ready() -> void:
 	_capture("/tmp/wm_boss_defeated.png")
 	print("[shot] boss defeated saved")
 
+	_restore_memory()
 	get_tree().quit()
+
+
+func _restore_memory() -> void:
+	if _memory_backup != "":
+		var f := FileAccess.open(SaveManager.WORLD_MEMORY_PATH, FileAccess.WRITE)
+		f.store_string(_memory_backup)
+		f.close()
+	else:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveManager.WORLD_MEMORY_PATH))
+	WorldMemory.reset()
 
 
 func _capture(path: String) -> void:

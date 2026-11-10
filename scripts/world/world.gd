@@ -95,6 +95,24 @@ func _ready() -> void:
 	_build_walls()
 	_setup_water_shimmer(water_cell)
 	_setup_waterfall(water_cell)
+	_apply_world_memory()
+
+
+## Replay permanent deltas recorded in earlier runs (the deterministic
+## seed rebuild + delta replay model, AGENTS.md §11): the world is
+## identical for everyone, then remembered facts are applied on top.
+func _apply_world_memory() -> void:
+	if WorldMemory.has_event(WorldMemory.EVENT_BOSS):
+		boss_defeated = true
+		var boss := get_boss()
+		if boss != null and is_instance_valid(boss):
+			boss.queue_free()
+	if WorldMemory.has_event(WorldMemory.EVENT_RUNE):
+		for child in props.get_children():
+			if child.has_method("force_activate"):
+				child.call("force_activate")
+	if WorldMemory.has_event(WorldMemory.EVENT_FORD):
+		build_ford()
 
 
 ## Parent to reparent entities into so they y-sort against props.
@@ -318,10 +336,13 @@ func on_spell_cast(spell: Dictionary, cast_position: Vector2) -> String:
 
 ## The awakened rune channels the river: water tiles on FORD_ROW turn
 ## into walkable stone (tile swap removes the water collision too).
+## The awakened rune + ford are permanent world facts once built.
 func build_ford() -> void:
 	if ford_built:
 		return
 	ford_built = true
+	WorldMemory.record_and_persist(WorldMemory.EVENT_FORD)
+	WorldMemory.record_and_persist(WorldMemory.EVENT_RUNE)
 	var water := river_cells()
 	for x in MAP_CELLS.x:
 		var cell := Vector2i(x, FORD_ROW)
@@ -432,6 +453,8 @@ func _spawn_boss() -> void:
 func _on_boss_died() -> void:
 	boss_defeated = true
 	boss_died.emit()
+	# Permanent world progress: the king stays dead across restarts.
+	WorldMemory.record_and_persist(WorldMemory.EVENT_BOSS)
 
 
 ## Boss accessor for the HUD health bar (duck-typed reads keep this

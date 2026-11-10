@@ -7,6 +7,9 @@ extends SceneTree
 ##   godot --headless --path . -s res://tests/water_anim_test.gd
 
 var _failures := 0
+## World memory isolation: the ford-safety check below activates the
+## rune, which persists a permanent event — back up / clear / restore.
+var _memory_backup := ""
 
 
 func _initialize() -> void:
@@ -14,6 +17,13 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_memory_backup = ""
+	if FileAccess.file_exists(SaveManager.WORLD_MEMORY_PATH):
+		var mf := FileAccess.open(SaveManager.WORLD_MEMORY_PATH, FileAccess.READ)
+		_memory_backup = mf.get_as_text()
+		mf.close()
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveManager.WORLD_MEMORY_PATH))
+	WorldMemory.reset()
 	# --- Waterfall texture ---
 	var tex: Texture2D = load("res://assets/sprites/effects/waterfall_32x64.png")
 	_expect(tex != null and Vector2i(tex.get_size()) == Vector2i(32, 64),
@@ -84,6 +94,15 @@ func _run() -> void:
 		if ground.get_cell_tile_data(Vector2i(x, 12)) != null and coords.y == 6:
 			ford_intact = false
 	_expect(ford_intact, "shimmer never reverts ford tiles to water")
+
+	# Restore the developer's real world-memory file.
+	if _memory_backup != "":
+		var rf := FileAccess.open(SaveManager.WORLD_MEMORY_PATH, FileAccess.WRITE)
+		rf.store_string(_memory_backup)
+		rf.close()
+	else:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveManager.WORLD_MEMORY_PATH))
+	WorldMemory.reset()
 
 	_finish()
 

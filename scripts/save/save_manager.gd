@@ -53,3 +53,54 @@ static func load_game(slot: String = "slot_01") -> Dictionary:
 	if version != SAVE_VERSION:
 		return {"ok": false, "state": {}, "error": "unsupported version %d" % version}
 	return {"ok": true, "state": parsed.get("state", {}), "error": ""}
+
+
+## --- Permanent world memory (tier 1, AGENTS.md §11) ---
+## A separate file from session slots: meta-progress that outlives any
+## adventure. A missing file means a fresh world, not an error.
+
+const WORLD_MEMORY_PATH := "user://world_memory.json"
+const WORLD_MEMORY_VERSION := 1
+
+
+## Returns {"ok": bool, "error": String}. Atomic write like save_game.
+static func save_world_memory(events: Dictionary) -> Dictionary:
+	var payload := {"version": WORLD_MEMORY_VERSION, "events": events}
+	var tmp := WORLD_MEMORY_PATH + ".tmp"
+	var file := FileAccess.open(tmp, FileAccess.WRITE)
+	if file == null:
+		return {"ok": false, "error": "cannot open tmp file"}
+	file.store_string(JSON.stringify(payload, "\t"))
+	file.close()
+	var err := DirAccess.rename_absolute(tmp, WORLD_MEMORY_PATH)
+	if err != OK:
+		return {"ok": false, "error": "rename failed (%d)" % err}
+	return {"ok": true, "error": ""}
+
+
+## Returns {"ok": bool, "events": Dictionary, "error": String}. Missing
+## file → ok with empty events (fresh world); damaged file → refused.
+static func load_world_memory() -> Dictionary:
+	if not FileAccess.file_exists(WORLD_MEMORY_PATH):
+		return {"ok": true, "events": {}, "error": ""}
+	var file := FileAccess.open(WORLD_MEMORY_PATH, FileAccess.READ)
+	if file == null:
+		return {"ok": false, "events": {}, "error": "cannot open"}
+	var parsed = JSON.parse_string(file.get_as_text())
+	file.close()
+	if parsed == null or not parsed is Dictionary:
+		return {"ok": false, "events": {}, "error": "corrupted world memory"}
+	var version: int = int(parsed.get("version", 0))
+	if version != WORLD_MEMORY_VERSION:
+		return {"ok": false, "events": {}, "error": "unsupported version %d" % version}
+	return {"ok": true, "events": parsed.get("events", {}), "error": ""}
+
+
+## Dev reset: forget permanent progress. Returns {"ok", "error"}.
+static func delete_world_memory() -> Dictionary:
+	if not FileAccess.file_exists(WORLD_MEMORY_PATH):
+		return {"ok": true, "error": ""}
+	var err := DirAccess.remove_absolute(ProjectSettings.globalize_path(WORLD_MEMORY_PATH))
+	if err != OK:
+		return {"ok": false, "error": "delete failed (%d)" % err}
+	return {"ok": true, "error": ""}

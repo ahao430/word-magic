@@ -10,6 +10,9 @@ const FIRE_SPELL := {"element": "fire", "shape": "projectile", "mechanics": ["da
 		"parameters": {"damage": 20, "radius": 8, "speed": 300, "duration": 2.0}, "display": "火球术"}
 
 var _failures := 0
+## World memory isolation: activating the rune persists a permanent
+## ford event — back up / clear / restore the real file.
+var _memory_backup := ""
 
 
 func _initialize() -> void:
@@ -17,6 +20,13 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_memory_backup = ""
+	if FileAccess.file_exists(SaveManager.WORLD_MEMORY_PATH):
+		var mf := FileAccess.open(SaveManager.WORLD_MEMORY_PATH, FileAccess.READ)
+		_memory_backup = mf.get_as_text()
+		mf.close()
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveManager.WORLD_MEMORY_PATH))
+	WorldMemory.reset()
 	# --- Validator unit checks ---
 	var rules := {"elements": ["water", "ice"], "shapes": [], "mechanics": []}
 	_expect(PuzzleValidator.evaluate(rules, ICE_SPELL)["ok"], "ice satisfies the water-channeling rules")
@@ -62,6 +72,15 @@ func _run() -> void:
 	# Already awake: polite refusal.
 	var r_again: Dictionary = stone.try_activate(ICE_SPELL, near_stone)
 	_expect(not r_again["ok"] and r_again["reason"] == "already", "second activation refused")
+
+	# Restore the developer's real world-memory file.
+	if _memory_backup != "":
+		var rf := FileAccess.open(SaveManager.WORLD_MEMORY_PATH, FileAccess.WRITE)
+		rf.store_string(_memory_backup)
+		rf.close()
+	else:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveManager.WORLD_MEMORY_PATH))
+	WorldMemory.reset()
 
 	_finish()
 
