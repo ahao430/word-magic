@@ -16,6 +16,7 @@
 | 玩家角色精灵（12 帧 + SpriteFrames） | `assets/sprites/player/*.png`、`player_frames.tres` | 程序化合成（`tools/dev/build_player_sprites.gd`） | 同上 | 未确认 | 无 | 程序化生成，真 Alpha 裁切 |
 | 元素法球（投射物基底） | `assets/sprites/effects/orb_16.png` | 程序化合成（`tools/dev/build_orb_sprite.gd`） | 同上 | 未确认 | 无 | 白色径向法球，运行时按元素调制颜色 |
 | 史莱姆精灵（2 帧弹跳 + SpriteFrames） | `assets/sprites/enemies/*.png`、`slime_frames.tres` | 程序化合成（`tools/dev/build_slime_sprites.gd`） | 同上 | 未确认 | 无 | 程序化生成，真 Alpha 裁切 |
+| 符文石精灵（休眠/苏醒 两态） | `assets/sprites/puzzles/rune_*.png` | 程序化合成（`tools/dev/build_rune_sprites.gd`） | 同上 | 未确认 | 无 | 程序化生成，刻痕符文双色 |
 | 概念图集（13 张） | `assets/source/generated/concept_atlases/` | AI 图像生成服务 | pending | 未确认 | 无 | 未修改，仅作参考 |
 | 地形过渡参考 | `assets/source/generated/forest_transitions_ref/` | AI 图像生成服务 | pending | 未确认 | 无 | 未修改，仅作参考 |
 | 水域参考 ×2 | `assets/source/generated/forest_water_ref/` | AI 图像生成服务 | pending | 未确认 | 无 | 未修改，仅作参考 |

@@ -44,6 +44,11 @@ const SLIME_COUNT := 8
 const SLIME_SEED := 777
 const SLIME_MIN_SPAWN_DISTANCE := 6.0
 
+## Water-channeling puzzle: rune stone beside the river; activating it
+## builds a stone ford across FORD_ROW.
+const RUNE_STONE_CELL := Vector2i(13, 12)
+const FORD_ROW := 12
+
 
 @onready var ground: TileMapLayer = $GroundLayer
 @onready var props: Node2D = $Props
@@ -62,6 +67,7 @@ func _ready() -> void:
 	_paint_ground(dirt_cell, water_cell, macro, detail)
 	_scatter_props(compute_placements(dirt_cell, water_cell, MAP_CELLS, PROP_SEED))
 	_scatter_slimes(dirt_cell, water_cell)
+	_setup_puzzle()
 	_build_walls()
 
 
@@ -198,6 +204,41 @@ func _bit_for(offset: Vector2i) -> int:
 	if offset == Vector2i.DOWN:
 		return BIT_S
 	return BIT_W
+
+
+func _setup_puzzle() -> void:
+	## Place the rune stone on its bank cell, freeing the cell of any
+	## scattered prop so the two never overlap.
+	var stone: Node2D = load("res://scenes/puzzles/rune_stone.tscn").instantiate()
+	stone.name = "RuneStone"
+	for child in props.get_children():
+		var is_blocking_prop: bool = child.name.begins_with("Tree_") or child.name.begins_with("Rock_")
+		if is_blocking_prop and Vector2i(int(child.position.x) / 32, int(child.position.y - 16) / 32) == RUNE_STONE_CELL:
+			child.queue_free()
+	stone.setup(self, RUNE_STONE_CELL)
+	props.add_child(stone)
+
+
+## Forward a successful spell cast to puzzle nodes near the caster.
+## Returns the first human-readable puzzle reaction ("" when silent).
+func on_spell_cast(spell: Dictionary, cast_position: Vector2) -> String:
+	for child in props.get_children():
+		if child.has_method("try_activate"):
+			var reaction: Dictionary = child.try_activate(spell, cast_position)
+			if reaction.get("message", "") != "":
+				return reaction["message"]
+	return ""
+
+
+## The awakened rune channels the river: water tiles on FORD_ROW turn
+## into walkable stone (tile swap removes the water collision too).
+func build_ford() -> void:
+	var water := river_cells()
+	for x in MAP_CELLS.x:
+		var cell := Vector2i(x, FORD_ROW)
+		if water.has(cell):
+			var coords := STONE_MOSS if x % 3 == 0 else STONE_PAVING
+			ground.set_cell(cell, TILE_SOURCE_ID, coords)
 
 
 func _scatter_slimes(dirt_cell: Dictionary, water_cell: Dictionary) -> void:

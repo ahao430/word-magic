@@ -9,6 +9,7 @@ const SHOT_A := "/tmp/wm_gameplay_idle.png"
 const SHOT_B := "/tmp/wm_gameplay_moved.png"
 const SHOT_C := "/tmp/wm_gameplay_cast.png"
 const SHOT_D := "/tmp/wm_gameplay_spellbook.png"
+const SHOT_E := "/tmp/wm_gameplay_puzzle.png"
 
 const MAGIC := preload("res://scripts/magic/magic_facade.gd")
 
@@ -59,6 +60,23 @@ func _ready() -> void:
 	await RenderingServer.frame_post_draw
 	_capture(SHOT_D)
 	print("[shot] spellbook saved")
+	main.get_node("HUD/Spellbook").visible = false
+
+	# Walk the puzzle path: stand by the rune stone, cast ice, catch
+	# the awakened stone with the new ford across the river.
+	var world: Node2D = main.get_node("World")
+	player.position = Vector2(13 * 32 + 16, 12 * 32 + 40)
+	await RenderingServer.frame_post_draw
+	var puzzle_result: Dictionary = MAGIC.cast("寒冰箭", player, world, SpellSession.new())
+	if puzzle_result["ok"]:
+		# Mirror main.gd: forward the cast to puzzle nodes.
+		print("[shot] puzzle: ", world.on_spell_cast(puzzle_result["spell"], player.global_position))
+	else:
+		print("[shot] puzzle cast failed: ", puzzle_result["reason"])
+	for i in 45:
+		await RenderingServer.frame_post_draw
+	_capture(SHOT_E)
+	print("[shot] puzzle saved")
 
 	get_tree().quit()
 

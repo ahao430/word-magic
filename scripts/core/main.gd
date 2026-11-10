@@ -43,6 +43,11 @@ func _on_cast_submitted(text: String) -> void:
 		cast_result.add_theme_color_override("font_color", Color(0.7, 1.0, 0.7))
 		GameManager.log_info("cast '%s' ok, cost %d" % [text, result["cost"]])
 		_add_codex_row(result["spell"])
+		# Puzzle reactions (rule-based, game-side validation).
+		var puzzle_msg: String = $World.on_spell_cast(result["spell"], player.global_position)
+		if puzzle_msg != "":
+			cast_result.text = result["message"] + "\n" + puzzle_msg
+			GameManager.log_info("puzzle: " + puzzle_msg)
 	else:
 		cast_result.add_theme_color_override("font_color", Color(1.0, 0.65, 0.6))
 		GameManager.log_info("cast '%s' failed: %s" % [text, result["reason"]])
