@@ -40,6 +40,7 @@ func try_activate(spell: Dictionary, cast_position: Vector2) -> Dictionary:
 				"message": "符文纹丝不动（元素不合：%s）" % spell.get("element", "?")}
 
 	state = State.ACTIVATING
+	Sfx.play("sfx_puzzle")
 	_sprite.texture = active_tex
 	var tween := create_tween()
 	tween.tween_property(_sprite, "modulate", Color(1.6, 1.6, 1.6), 0.3)

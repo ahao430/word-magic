@@ -50,6 +50,7 @@ func take_damage(amount: float, from_dir: Vector2) -> void:
 		return
 	hp -= amount
 	_invuln_timer = INVULN_TIME
+	Sfx.play("sfx_hurt")
 	# Small knockback away from the attacker.
 	global_position += from_dir * 6.0
 	if hp <= 0.0:

@@ -45,6 +45,7 @@ static func spawn(spell_data: Dictionary, origin: Vector2, direction: Vector2, p
 
 func _ready() -> void:
 	sprite.modulate = ELEMENT_TINT.get(spell.get("element", "fire"), Color.WHITE)
+	Sfx.play(Sfx.cast_sound_for(spell.get("element", "fire")))
 	body_entered.connect(_on_body_entered)
 
 
@@ -61,6 +62,8 @@ func _on_body_entered(body: Node2D) -> void:
 	if body != null and body.has_method("take_damage"):
 		var dir := velocity.normalized()
 		body.call("take_damage", spell.get("parameters", {}).get("damage", 0.0), dir)
+	# Impact recipe: fire pops, everything else thumps.
+	Sfx.play("sfx_explosion" if spell.get("element", "") == "fire" else "sfx_hit")
 	_explode()
 
 
