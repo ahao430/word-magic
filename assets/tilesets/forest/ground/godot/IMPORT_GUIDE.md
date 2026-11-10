@@ -1,5 +1,12 @@
 # Word Magic — Forest Ground Tiles v1
 
+## Status (2026-11-11)
+
+The PNG files next to this guide are the **production copies**: alpha flattened to fully
+opaque, with 42 pale edge-contamination pixels inpainted (39 in dirt_grassy_edge).
+The untouched originals (globally semi-transparent, alpha 224–254) live in
+`assets/source/generated/ground_tiles_v0/`. Details: `docs/ART_ASSET_IMPLEMENTATION.md`.
+
 ## Contents
 
 Eight 32×32 RGBA PNG ground samples: grass, flower grass, dense grass, dirt, dirt variant, grassy clearing/edge, stone paving and mossy stone.
