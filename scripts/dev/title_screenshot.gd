@@ -16,5 +16,17 @@ func _ready() -> void:
 		push_error("[shot] failed")
 	else:
 		print("[shot] title saved")
+
+	# Settings overlay, opened exactly as the button would.
+	var panel: Control = title.get_node("SettingsPanel")
+	panel.open()
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	img = get_viewport().get_texture().get_image()
+	if img.save_png("/tmp/wm_settings.png") != OK:
+		push_error("[shot] failed")
+	else:
+		print("[shot] settings saved")
+
 	title.free()
 	get_tree().quit()

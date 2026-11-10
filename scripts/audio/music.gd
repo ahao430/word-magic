@@ -17,6 +17,7 @@ static func play(resource_name: String, volume_db := -12.0) -> void:
 		var root := (Engine.get_main_loop() as SceneTree).root
 		_player = AudioStreamPlayer.new()
 		_player.name = "Music"
+		_player.bus = "Music"  # volume owned by the settings panel
 		root.add_child(_player)
 		# Stop playback and drop the static reference at teardown so the
 		# WAV stream/playback do not outlive the tree at exit.

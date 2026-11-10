@@ -50,6 +50,7 @@ static func _acquire() -> AudioStreamPlayer:
 	var root := (Engine.get_main_loop() as SceneTree).root
 	var p := AudioStreamPlayer.new()
 	p.name = "Sfx%d" % _pool.size()
+	p.bus = "SFX"  # volume owned by the settings panel
 	root.add_child(p)
 	_pool.append(p)
 	return p

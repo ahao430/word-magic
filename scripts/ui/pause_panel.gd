@@ -19,6 +19,7 @@ func _process(_delta: float) -> void:
 			visible = true
 			get_tree().paused = true
 			GameManager.set_state(GameManager.GameState.PAUSED)
+			$Margin/Rows/ResumeButton.grab_focus()
 
 
 func _resume() -> void:
