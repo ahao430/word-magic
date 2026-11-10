@@ -1,12 +1,15 @@
 extends Node2D
-## Dev-only: instances the real main scene, captures two screenshots
-## (idle, and after walking right) to verify map rendering, player
-## visibility and camera follow outside the editor.
+## Dev-only: instances the real main scene, captures three screenshots
+## (idle, after walking right, and mid-cast with a fireball flying) to
+## verify map/player/casting rendering outside the editor.
 ##
-##   godot --path . res://scenes/dev/gameplay_screenshot.tscn --quit-after 600
+##   godot --path . res://scenes/dev/gameplay_screenshot.tscn --quit-after 900
 
 const SHOT_A := "/tmp/wm_gameplay_idle.png"
 const SHOT_B := "/tmp/wm_gameplay_moved.png"
+const SHOT_C := "/tmp/wm_gameplay_cast.png"
+
+const MAGIC := preload("res://scripts/magic/magic_facade.gd")
 
 
 func _ready() -> void:
@@ -25,6 +28,19 @@ func _ready() -> void:
 	await RenderingServer.frame_post_draw
 	_capture(SHOT_B)
 	print("[shot] moved saved")
+
+	# Cast a fireball to the right of the player and catch it in flight.
+	var player: CharacterBody2D = null
+	for child in main.get_node("World").get_entity_parent().get_children():
+		if child is CharacterBody2D:
+			player = child
+			break
+	var result: Dictionary = MAGIC.cast("火球术", player, main.get_node("World"))
+	print("[shot] cast: ", result["message"], " cost ", result["cost"])
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	_capture(SHOT_C)
+	print("[shot] cast saved")
 
 	get_tree().quit()
 

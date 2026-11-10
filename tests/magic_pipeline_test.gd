@@ -1,0 +1,93 @@
+extends SceneTree
+## Headless test for the offline casting pipeline: normalization,
+## local registry, validation, balance and the facade end-to-end
+## (including mana accounting and graceful unknown/not-unlocked paths).
+##
+##   godot --headless --path . -s res://tests/magic_pipeline_test.gd
+
+var _failures := 0
+
+
+func _initialize() -> void:
+	call_deferred("_run")
+
+
+func _run() -> void:
+	# --- Text normalization ---
+	_expect(TextNormalizer.normalize("  火球术 ") == "火球术", "trims whitespace")
+	_expect(TextNormalizer.normalize("火球术！") == "火球术", "strips punctuation")
+	_expect(TextNormalizer.normalize("火球术！") == "火球术", "folds full-width marks")
+	_expect(TextNormalizer.normalize("Ｆｉｒｅ９９") == "fire99", "folds full-width alnum")
+	_expect(TextNormalizer.normalize("…") == "", "drops non-cjk symbols")
+
+	# --- Registry ---
+	_expect(not LocalSpellRegistry.lookup("火球术").is_empty(), "registry knows 火球术")
+	_expect(LocalSpellRegistry.lookup("任意乱码").is_empty(), "unknown phrase returns empty")
+
+	# --- Validator ---
+	var good := SpellValidator.validate(LocalSpellRegistry.lookup("火球术"))
+	_expect(good["valid"], "火球术 draft validates")
+	var bad := {"element": "void", "shape": "blackhole", "mechanics": ["delete_save"], "parameters": {}}
+	var checked := SpellValidator.validate(bad)
+	_expect(not checked["valid"] and checked["errors"].size() >= 3, "unknown element/shape/mechanic rejected")
+	var over := {"element": "fire", "shape": "projectile", "mechanics": ["damage"],
+			"parameters": {"damage": 999.0, "radius": 999.0, "speed": 999.0, "duration": 99.0}}
+	var clamped := SpellValidator.validate(over)
+	_expect(clamped["valid"], "out-of-range params clamp instead of fail")
+	_expect(clamped["spell"]["parameters"]["damage"] == 60.0, "damage clamped to cap")
+
+	# --- Balance ---
+	var cost: int = SpellBalance.compute_cost(good["spell"])
+	_expect(cost >= 10 and cost <= 20, "火球术 cost in simple band (got %d)" % cost)
+	var costly := SpellValidator.validate(LocalSpellRegistry.lookup("烈焰焚天"))
+	var cost2: int = SpellBalance.compute_cost(costly["spell"])
+	_expect(cost2 > 20, "烈焰焚天 costs more than simple spells (got %d)" % cost2)
+
+	# --- Facade end-to-end with a real world + player ---
+	var world: Node2D = load("res://scenes/world/world.tscn").instantiate()
+	root.add_child(world)
+	var player: CharacterBody2D = load("res://scenes/player/player.tscn").instantiate()
+	world.get_entity_parent().add_child(player)
+	await physics_frame
+	await physics_frame
+
+	var r1: Dictionary = MagicFacade.cast("  火球术！", player, world)
+	_expect(r1["ok"], "cast 火球术 succeeds (%s)" % r1["message"])
+	_expect(absf(player.mana - (100.0 - r1["cost"])) < 0.01, "mana charged (left %.1f)" % player.mana)
+	var projectiles := 0
+	for child in world.get_entity_parent().get_children():
+		if child is Area2D:
+			projectiles += 1
+	_expect(projectiles >= 1, "projectile spawned")
+
+	var r2: Dictionary = MagicFacade.cast("神秘乱语", player, world)
+	_expect(not r2["ok"] and r2["reason"] == "unknown", "unknown phrase rejected gracefully")
+
+	var r3: Dictionary = MagicFacade.cast("风卷残云", player, world)
+	_expect(not r3["ok"] and r3["reason"] == "not_unlocked",
+			"unimplemented shape refunded with message (%s)" % r3["message"])
+
+	var mana_before: float = player.mana
+	player.mana = 3.0
+	var r4: Dictionary = MagicFacade.cast("火球术", player, world)
+	_expect(not r4["ok"] and r4["reason"] == "no_mana", "low mana blocks cast")
+	player.mana = mana_before
+
+	_finish()
+
+
+func _finish() -> void:
+	if _failures == 0:
+		print("ALL PASS")
+		quit(0)
+	else:
+		print("FAILURES: %d" % _failures)
+		quit(1)
+
+
+func _expect(cond: bool, what: String) -> void:
+	if cond:
+		print("PASS  " + what)
+	else:
+		_failures += 1
+		print("FAIL  " + what)
