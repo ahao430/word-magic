@@ -32,6 +32,64 @@ func _process(_delta: float) -> void:
 	hp_bar.value = player.hp
 	if Input.is_action_just_pressed("toggle_spellbook"):
 		spellbook.visible = not spellbook.visible
+	if Input.is_action_just_pressed("save_game"):
+		_do_save()
+	if Input.is_action_just_pressed("load_game"):
+		_do_load()
+
+
+func _do_save() -> void:
+	var state := {
+		"player": {"x": player.global_position.x, "y": player.global_position.y,
+				"hp": player.hp, "mana": player.mana},
+		"session": spell_session.capture_state(),
+		"world": $World.capture_state(),
+	}
+	var result: Dictionary = SaveManager.save_game(state)
+	if result["ok"]:
+		_toast("冒险已记录（F9 读取）", true)
+	else:
+		_toast("保存失败：" + result["error"], false)
+
+
+func _do_load() -> void:
+	var result: Dictionary = SaveManager.load_game()
+	if not result["ok"]:
+		_toast("读取失败：" + result["error"], false)
+		return
+	var state: Dictionary = result["state"]
+	var p: Dictionary = state.get("player", {})
+	if not p.is_empty():
+		player.global_position = Vector2(p.get("x", 784.0), p.get("y", 528.0))
+		player.hp = p.get("hp", 30.0)
+		player.mana = p.get("mana", 100.0)
+	spell_session.restore_state(state.get("session", {}))
+	$World.restore_state(state.get("world", {}))
+	_rebuild_codex_ui()
+	_toast("冒险已恢复", true)
+
+
+func _rebuild_codex_ui() -> void:
+	for child in spellbook_list.get_children():
+		child.queue_free()
+	for row in spell_session.codex:
+		_add_codex_row(row)
+
+
+## Rising token: only the newest toast's timer may clear the label.
+var _toast_token := 0
+
+
+func _toast(message: String, ok: bool) -> void:
+	cast_result.text = message
+	cast_result.add_theme_color_override("font_color",
+			Color(0.7, 1.0, 0.7) if ok else Color(1.0, 0.65, 0.6))
+	_toast_token += 1
+	var token := _toast_token
+	_result_clear_timer = get_tree().create_timer(3.0)
+	_result_clear_timer.timeout.connect(func():
+		if token == _toast_token:
+			cast_result.text = "")
 
 
 func _on_cast_submitted(text: String) -> void:

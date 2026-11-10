@@ -53,6 +53,9 @@ const FORD_ROW := 12
 @onready var ground: TileMapLayer = $GroundLayer
 @onready var props: Node2D = $Props
 
+## Session world state (saved/restored with the session save).
+var ford_built := false
+
 
 func _ready() -> void:
 	var macro := FastNoiseLite.new()
@@ -233,12 +236,45 @@ func on_spell_cast(spell: Dictionary, cast_position: Vector2) -> String:
 ## The awakened rune channels the river: water tiles on FORD_ROW turn
 ## into walkable stone (tile swap removes the water collision too).
 func build_ford() -> void:
+	if ford_built:
+		return
+	ford_built = true
 	var water := river_cells()
 	for x in MAP_CELLS.x:
 		var cell := Vector2i(x, FORD_ROW)
 		if water.has(cell):
 			var coords := STONE_MOSS if x % 3 == 0 else STONE_PAVING
 			ground.set_cell(cell, TILE_SOURCE_ID, coords)
+
+
+## --- Session save/load (world tier) ---
+
+## Capture: rune state, ford, and which slimes are still alive (the
+## scatter is deterministic, so names identify individuals).
+func capture_state() -> Dictionary:
+	var rune_state := 0
+	var alive_slimes := []
+	for child in props.get_children():
+		if child.has_method("try_activate"):
+			rune_state = child.state
+		elif child is CharacterBody2D and child.name.begins_with("Slime_"):
+			alive_slimes.append(child.name)
+	return {"rune_state": rune_state, "ford_built": ford_built, "alive_slimes": alive_slimes}
+
+
+## Restore after the deterministic world rebuild: replay the ford,
+## re-awaken the rune silently, remove slimes that died before saving.
+func restore_state(data: Dictionary) -> void:
+	if data.get("ford_built", false):
+		build_ford()
+		for child in props.get_children():
+			if child.has_method("force_activate"):
+				child.call("force_activate")
+	var alive: Array = data.get("alive_slimes", [])
+	for child in props.get_children():
+		if child is CharacterBody2D and child.name.begins_with("Slime_"):
+			if not alive.has(child.name):
+				child.queue_free()
 
 
 func _scatter_slimes(dirt_cell: Dictionary, water_cell: Dictionary) -> void:

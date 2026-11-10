@@ -45,7 +45,7 @@ func record(raw_text: String, normalized: String, spell: Dictionary) -> void:
 
 
 ## Mechanism signature: element + shape + sorted mechanics + bucketed
-## parameters. Close-but-different names with identical mechanics
+## parameters. Close-but-different names with identical mechanisms
 ## (火球术 vs 火球) collide; genuinely different spells do not.
 ## Semantic similarity (embeddings) joins here later as a fourth check.
 static func mechanism_signature(spell: Dictionary) -> String:
@@ -64,3 +64,29 @@ static func mechanism_signature(spell: Dictionary) -> String:
 		int(p.get("duration", 0.0)),
 		int(p.get("speed", 0.0) / 60.0),
 	]
+
+
+## --- Session save/load support (AGENTS.md §11) ---
+
+func capture_state() -> Dictionary:
+	return {
+		"exact": _exact_texts.keys(),
+		"normalized": _normalized_texts.keys(),
+		"signatures": _signatures.keys(),
+		"codex": codex,
+	}
+
+
+func restore_state(data: Dictionary) -> void:
+	_exact_texts = {}
+	_normalized_texts = {}
+	_signatures = {}
+	for k in data.get("exact", []):
+		_exact_texts[k] = true
+	for k in data.get("normalized", []):
+		_normalized_texts[k] = true
+	for k in data.get("signatures", []):
+		_signatures[k] = true
+	codex = []
+	for row in data.get("codex", []):
+		codex.append(row)

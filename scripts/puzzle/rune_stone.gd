@@ -53,3 +53,11 @@ func _finish_activation() -> void:
 	if _world != null and _world.has_method("build_ford"):
 		_world.call("build_ford")
 	GameManager.log_info("rune stone activated: ford built across the river")
+
+
+## Restore path: jump straight to ACTIVATED (no tween, no ford call —
+## the world replays the ford itself) for loaded sessions.
+func force_activate() -> void:
+	state = State.ACTIVATED
+	if _sprite != null:
+		_sprite.texture = active_tex
