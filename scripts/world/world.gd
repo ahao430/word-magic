@@ -63,6 +63,11 @@ var _water_anim_acc := 0.0
 var _water_cycle := 0
 var _open_water: Array[Vector2i] = []
 
+## Tree sway: canopies rotate a couple of degrees around a per-tree
+## phase so the forest breathes without synchronization.
+var _sway_time := 0.0
+var _sway_targets: Array = []  # [sprite, phase] pairs, built lazily
+
 
 func _ready() -> void:
 	var macro := FastNoiseLite.new()
@@ -180,6 +185,8 @@ func _paint_ground(dirt_cell: Dictionary, water_cell: Dictionary,
 
 
 func _process(delta: float) -> void:
+	_sway_time += delta
+	_sway_trees()
 	_water_anim_acc += delta
 	if _water_anim_acc < WATER_CYCLE_TIME:
 		return
@@ -192,6 +199,24 @@ func _process(delta: float) -> void:
 			continue
 		var variant := (cell.x + cell.y + _water_cycle) % 4
 		ground.set_cell(cell, TILE_SOURCE_ID, Vector2i(variant, WATER_ROW))
+
+
+func _sway_trees() -> void:
+	if _sway_targets.is_empty():
+		for child in props.get_children():
+			if child.name.begins_with("Tree_"):
+				var idx := child.get_child_count() - 1
+				if idx < 0:
+					continue
+				var sprite: Node = child.get_child(idx)
+				if sprite is Sprite2D:
+					var parts := child.name.split("_")
+					var phase := (int(parts[1]) * 13 + int(parts[2]) * 7) * 0.37
+					_sway_targets.append([sprite, phase])
+	for pair in _sway_targets:
+		var sprite: Sprite2D = pair[0]
+		if is_instance_valid(sprite):
+			sprite.rotation = sin(_sway_time * 1.4 + pair[1]) * 0.022
 
 
 func _setup_water_shimmer(water_cell: Dictionary) -> void:

@@ -11,6 +11,18 @@ const PITCH_VARIATION := 0.08
 
 static var _cache := {}
 static var _pool: Array[AudioStreamPlayer] = []
+static var _teardown_hooked := false
+
+
+static func _hook_teardown() -> void:
+	if _teardown_hooked:
+		return
+	_teardown_hooked = true
+	var root := (Engine.get_main_loop() as SceneTree).root
+	# Drop pool + cache references at teardown so exit stays leak-free.
+	root.tree_exiting.connect(func():
+		_pool.clear()
+		_cache.clear())
 
 
 static func play(sfx_name: String, volume_db := 0.0) -> void:
@@ -29,6 +41,7 @@ static func play(sfx_name: String, volume_db := 0.0) -> void:
 
 
 static func _acquire() -> AudioStreamPlayer:
+	_hook_teardown()
 	for p in _pool:
 		if not p.playing:
 			return p

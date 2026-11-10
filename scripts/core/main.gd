@@ -27,6 +27,10 @@ func _ready() -> void:
 	player.reparent($World.get_entity_parent(), true)
 	cast_input.text_submitted.connect(_on_cast_submitted)
 	GameManager.set_state(GameManager.GameState.PLAYING)
+	# One frame late: attaching the music player during _ready makes the
+	# busy root reject add_child.
+	await get_tree().process_frame
+	Music.play("explore_loop")
 
 
 func _process(_delta: float) -> void:
