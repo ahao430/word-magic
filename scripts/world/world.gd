@@ -56,6 +56,13 @@ const FORD_ROW := 12
 ## Session world state (saved/restored with the session save).
 var ford_built := false
 
+## Open-water shimmer: the 4 surface variants cycle slowly; per-cell
+## phase offset keeps the swap from looking like a global strobe.
+const WATER_CYCLE_TIME := 0.45
+var _water_anim_acc := 0.0
+var _water_cycle := 0
+var _open_water: Array[Vector2i] = []
+
 
 func _ready() -> void:
 	var macro := FastNoiseLite.new()
@@ -72,6 +79,8 @@ func _ready() -> void:
 	_scatter_slimes(dirt_cell, water_cell)
 	_setup_puzzle()
 	_build_walls()
+	_setup_water_shimmer(water_cell)
+	_setup_waterfall(water_cell)
 
 
 ## Parent to reparent entities into so they y-sort against props.
@@ -168,6 +177,46 @@ func _paint_ground(dirt_cell: Dictionary, water_cell: Dictionary,
 				else:
 					coords = Vector2i(mask % 4, TRANSITION_ROW + floori(mask / 4.0))
 			ground.set_cell(cell, TILE_SOURCE_ID, coords)
+
+
+func _process(delta: float) -> void:
+	_water_anim_acc += delta
+	if _water_anim_acc < WATER_CYCLE_TIME:
+		return
+	_water_anim_acc = 0.0
+	_water_cycle = (_water_cycle + 1) % 4
+	for cell in _open_water:
+		# Skip cells the ford replaced (their atlas row left row 6);
+		# this also keeps the shimmer save/restore-safe.
+		if ground.get_cell_atlas_coords(cell).y != WATER_ROW:
+			continue
+		var variant := (cell.x + cell.y + _water_cycle) % 4
+		ground.set_cell(cell, TILE_SOURCE_ID, Vector2i(variant, WATER_ROW))
+
+
+func _setup_water_shimmer(water_cell: Dictionary) -> void:
+	for cell in water_cell.keys():
+		var mask := _land_neighbor_mask(cell, {}, water_cell)
+		if mask == 0:
+			_open_water.append(cell)
+
+
+func _setup_waterfall(water_cell: Dictionary) -> void:
+	## Animated waterfall curtain at the river's source (top rows).
+	var shader: Shader = load("res://shaders/waterfall_scroll.gdshader")
+	var tex: Texture2D = load("res://assets/sprites/effects/waterfall_32x64.png")
+	for cell in water_cell.keys():
+		if cell.y != 0:
+			continue
+		var sprite := Sprite2D.new()
+		sprite.name = "Waterfall_%d" % cell.x
+		sprite.texture = tex
+		var mat := ShaderMaterial.new()
+		mat.shader = shader
+		sprite.material = mat
+		sprite.position = Vector2(cell) * 32.0 + Vector2(16.0, 48.0)
+		sprite.scale = Vector2(1.0, 1.5)  # 3 tiles tall
+		props.add_child(sprite)
 
 
 func _grass_neighbor_mask(cell: Vector2i, dirt_cell: Dictionary) -> int:

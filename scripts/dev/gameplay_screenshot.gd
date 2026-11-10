@@ -78,6 +78,18 @@ func _ready() -> void:
 	_capture(SHOT_E)
 	print("[shot] puzzle saved")
 
+	# Water animation proof: teleport by the river source, capture two
+	# frames half a second apart (waterfall scroll + water shimmer).
+	player.position = Vector2(14 * 32 + 16, 6 * 32 + 16)
+	for i in 5:
+		await RenderingServer.frame_post_draw
+	_capture("/tmp/wm_river_t0.png")
+	print("[shot] river t0 saved")
+	for i in 30:
+		await RenderingServer.frame_post_draw
+	_capture("/tmp/wm_river_t1.png")
+	print("[shot] river t1 saved")
+
 	get_tree().quit()
 
 
