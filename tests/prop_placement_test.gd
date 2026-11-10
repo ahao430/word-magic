@@ -19,14 +19,19 @@ func _initialize() -> void:
 func _run() -> void:
 	var world_script := load("res://scripts/world/world.gd")
 
-	# Synthetic terrain: all grass except a dirt blob around (10, 8).
+	# Synthetic terrain: all grass except a dirt blob around (10, 8)
+	# and a water column at x 20-22.
 	var dirt := {}
 	for y in range(5, 12):
 		for x in range(7, 14):
 			dirt[Vector2i(x, y)] = true
+	var water := {}
+	for y in range(MAP.y):
+		for x in range(20, 23):
+			water[Vector2i(x, y)] = true
 
-	var a: Array = world_script.compute_placements(dirt, MAP, 20261112)
-	var b: Array = world_script.compute_placements(dirt, MAP, 20261112)
+	var a: Array = world_script.compute_placements(dirt, water, MAP, 20261112)
+	var b: Array = world_script.compute_placements(dirt, water, MAP, 20261112)
 	_expect(a.hash() == b.hash() and a.size() == b.size(), "same seed -> same placements")
 
 	var cells := {}
@@ -34,6 +39,8 @@ func _run() -> void:
 	var count_by_type := {"tree": 0, "rock": 0, "bush": 0}
 	for p in a:
 		var cell: Vector2i = p["cell"]
+		if water.has(cell):
+			ok_cells = false  # props must never land in water
 		if not cells.has(cell):
 			cells[cell] = true
 		else:

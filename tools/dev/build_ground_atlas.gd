@@ -3,10 +3,12 @@ extends SceneTree
 ##
 ##   godot --headless --path . -s res://tools/dev/build_ground_atlas.gd
 ##
-## Layout: 4 columns x 6 rows of 32px tiles (128 x 192).
+## Layout: 4 columns x 11 rows of 32px tiles (128 x 352).
 ##   rows 0-1: the 8 base ground tiles (grass/dirt/stone variants)
-##   rows 2-5: 16 procedural grass->dirt transition tiles, index ==
-##             side bitmask (N=1, E=2, S=4, W=8); row = 2 + mask/4
+##   rows 2-5: 16 grass->dirt transitions (index == side bitmask,
+##             N=1, E=2, S=4, W=8; row = 2 + mask/4)
+##   row 6:    4 water surface variants
+##   rows 7-10: 16 land->water shore transitions (same bitmask order)
 ##
 ## Run `--import` afterwards so the atlas gets import metadata before
 ## build_tileset.gd loads it.
@@ -18,9 +20,10 @@ const BASE_TILE_NAMES := [
 ]
 const TILE := 32
 const COLS := 4
-const ROWS := 6
+const ROWS := 11
 
 const TRANSITIONS := preload("res://tools/dev/transition_tiles.gd")
+const WATER := preload("res://tools/dev/water_tiles.gd")
 
 
 func _init() -> void:
@@ -29,6 +32,7 @@ func _init() -> void:
 		var tex: Texture2D = load("%s/%s.png" % [TILE_DIR, name])
 		tiles.append(tex.get_image())
 	tiles.append_array(TRANSITIONS.generate())
+	tiles.append_array(WATER.generate())
 	assert(tiles.size() == COLS * ROWS)
 
 	var atlas := Image.create(TILE * COLS, TILE * ROWS, false, Image.FORMAT_RGBA8)

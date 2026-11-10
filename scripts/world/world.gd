@@ -1,14 +1,15 @@
 extends Node2D
 ## Dev forest test map: paints a deterministic 48x32 ground layout from
-## the production ground tiles, chooses grass->dirt transition tiles by
-## 4-bit neighbor bitmask, scatters collidable props (trees/rocks) and
+## the production ground tiles, carves a meandering river with shore
+## transition tiles, scatters collidable props (trees/rocks) and
 ## non-colliding bushes, and walls the map borders.
 
 const MAP_CELLS := Vector2i(48, 32)
 const TILE_SOURCE_ID := 0
 
-## Atlas coordinates in forest_ground_atlas.png (4 cols x 6 rows).
-## Rows 0-1: base tiles. Rows 2-5: transitions, index == side bitmask.
+## Atlas coordinates in forest_ground_atlas.png (4 cols x 11 rows).
+## Rows 0-1 base, 2-5 grass->dirt transitions, 6 water surfaces,
+## 7-10 land->water shore transitions (index == side bitmask).
 const GRASS_PLAIN := Vector2i(0, 0)
 const GRASS_DENSE := Vector2i(1, 0)
 const GRASS_FLOWERS := Vector2i(2, 0)
@@ -17,12 +18,19 @@ const DIRT_VARIANT := Vector2i(0, 1)
 const STONE_PAVING := Vector2i(2, 1)
 const STONE_MOSS := Vector2i(3, 1)
 const TRANSITION_ROW := 2
+const WATER_ROW := 6
+const SHORE_ROW := 7
 
-## Bitmask for transition lookup: 1 = N neighbor grass, 2 = E, 4 = S, 8 = W.
+## Bitmask for transition lookup: 1 = N neighbor, 2 = E, 4 = S, 8 = W.
 const BIT_N := 1
 const BIT_E := 2
 const BIT_S := 4
 const BIT_W := 8
+
+## River: vertical, meandering around x ~ 9..15.
+const RIVER_SEED_PHASE := 1.2
+const RIVER_AMPLITUDE := 2.5
+const RIVER_FREQUENCY := 0.35
 
 ## Prop scatter probabilities per terrain family.
 const PROP_CHANCE := {
@@ -46,8 +54,9 @@ func _ready() -> void:
 	detail.frequency = 0.25
 
 	var dirt_cell := _classify(macro)
-	_paint_ground(dirt_cell, macro, detail)
-	_scatter_props(compute_placements(dirt_cell, MAP_CELLS, PROP_SEED))
+	var water_cell := river_cells()
+	_paint_ground(dirt_cell, water_cell, macro, detail)
+	_scatter_props(compute_placements(dirt_cell, water_cell, MAP_CELLS, PROP_SEED))
 	_build_walls()
 
 
@@ -56,10 +65,24 @@ func get_entity_parent() -> Node2D:
 	return props
 
 
+## Cells covered by the meandering river (3 wide, widening to 5).
+static func river_cells() -> Dictionary:
+	var water := {}
+	for y in 32:
+		var center := 12.0 + RIVER_AMPLITUDE * sin(y * RIVER_FREQUENCY + RIVER_SEED_PHASE)
+		var half := 1
+		if sin(y * 0.5 + 0.3) > 0.7:
+			half = 2
+		for dx in range(-half, half + 1):
+			water[Vector2i(int(round(center)) + dx, y)] = true
+	return water
+
+
 ## Pure, testable prop placement: returns [{"type": "..", "cell": Vector2i,
-## "variant": int}, ...]. Never places on stone paths, outside the map, on
-## the spawn clearing, or twice on the same cell.
-static func compute_placements(dirt_cell: Dictionary, map_cells: Vector2i, seed: int) -> Array[Dictionary]:
+## "variant": int}, ...]. Never places in water, on stone paths, outside
+## the map, in the spawn clearing, or twice on the same cell.
+static func compute_placements(dirt_cell: Dictionary, water_cell: Dictionary,
+		map_cells: Vector2i, seed: int) -> Array[Dictionary]:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
 	var occupied := {}
@@ -67,6 +90,8 @@ static func compute_placements(dirt_cell: Dictionary, map_cells: Vector2i, seed:
 	for y in map_cells.y:
 		for x in map_cells.x:
 			var cell := Vector2i(x, y)
+			if water_cell.has(cell):
+				continue
 			if cell == SPAWN_CELL or (Vector2(cell - SPAWN_CELL).length() <= SPAWN_CLEAR_RADIUS):
 				continue
 			if x == SPAWN_CELL.x or y == SPAWN_CELL.y:
@@ -98,13 +123,22 @@ func _classify(macro: FastNoiseLite) -> Dictionary:
 	return dirt_cell
 
 
-func _paint_ground(dirt_cell: Dictionary, macro: FastNoiseLite, detail: FastNoiseLite) -> void:
+func _paint_ground(dirt_cell: Dictionary, water_cell: Dictionary,
+		macro: FastNoiseLite, detail: FastNoiseLite) -> void:
 	for y in MAP_CELLS.y:
 		for x in MAP_CELLS.x:
 			var cell := Vector2i(x, y)
 			var coords: Vector2i
 			if x == SPAWN_CELL.x or y == SPAWN_CELL.y:
+				# Stone paths override terrain: the horizontal one doubles
+				# as the walkable ford across the river.
 				coords = STONE_MOSS if detail.get_noise_2d(x, y) > 0.45 else STONE_PAVING
+			elif water_cell.has(cell):
+				var mask := _land_neighbor_mask(cell, dirt_cell, water_cell)
+				if mask == 0:
+					coords = Vector2i(int(absf(detail.get_noise_2d(x, y) * 4.0)) % 4, WATER_ROW)
+				else:
+					coords = Vector2i(mask % 4, SHORE_ROW + floori(mask / 4.0))
 			elif x == 0 or y == 0 or x == MAP_CELLS.x - 1 or y == MAP_CELLS.y - 1:
 				coords = GRASS_DENSE
 			elif not dirt_cell[cell]:
@@ -138,6 +172,27 @@ func _grass_neighbor_mask(cell: Vector2i, dirt_cell: Dictionary) -> int:
 func _is_grass_cell(cell: Vector2i, dirt_cell: Dictionary) -> bool:
 	# Out-of-bounds counts as grass so map edges still close their fringes.
 	return not dirt_cell.get(cell, false)
+
+
+func _land_neighbor_mask(cell: Vector2i, dirt_cell: Dictionary, water_cell: Dictionary) -> int:
+	## Mask bits set for non-water neighbors (grass or dirt = land).
+	var mask := 0
+	var dirs: Array[Vector2i] = [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
+	for offset in dirs:
+		var n := cell + offset
+		if not water_cell.has(n):
+			mask |= _bit_for(offset)
+	return mask
+
+
+func _bit_for(offset: Vector2i) -> int:
+	if offset == Vector2i.UP:
+		return BIT_N
+	if offset == Vector2i.RIGHT:
+		return BIT_E
+	if offset == Vector2i.DOWN:
+		return BIT_S
+	return BIT_W
 
 
 func _scatter_props(placements: Array[Dictionary]) -> void:
