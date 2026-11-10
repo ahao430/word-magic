@@ -1,10 +1,12 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/enemies/boss_slime.gd" id="1_boss"]
 
 [ext_resource type="SpriteFrames" path="res://assets/sprites/enemies/boss_frames.tres" id="2_frames"]
 
 [ext_resource type="Texture2D" path="res://assets/sprites/effects/boss_shadow_28x12.png" id="3_shadow"]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/effects/slam_warning_164.png" id="4_ring"]
 
 [sub_resource type="RectangleShape2D" id="shape_boss"]
 size = Vector2(42, 22)
@@ -26,6 +28,11 @@ sprite_frames = ExtResource("2_frames")
 animation = &"default"
 autoplay = "default"
 offset = Vector2(0, -22)
+
+[node name="Telegraph" type="Sprite2D" parent="."]
+top_level = true
+visible = false
+texture = ExtResource("4_ring")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, 6)

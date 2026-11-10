@@ -7,6 +7,7 @@ const NAMES := [
 	"sfx_cast_fire", "sfx_cast_ice", "sfx_cast_lightning", "sfx_cast_wind",
 	"sfx_hit", "sfx_explosion", "sfx_hurt", "sfx_puzzle",
 	"sfx_slam", "sfx_boss_die",
+	"sfx_impact_ice", "sfx_impact_lightning", "sfx_impact_wind",
 ]
 
 var _failures := 0
@@ -40,6 +41,15 @@ func _run() -> void:
 	_expect(Sfx.cast_sound_for("lightning") == "sfx_cast_lightning", "lightning recipe")
 	_expect(Sfx.cast_sound_for("wind") == "sfx_cast_wind" and Sfx.cast_sound_for("water") == "sfx_cast_wind",
 			"wind is the fallback recipe")
+
+	# --- Element -> impact recipe ---
+	_expect(Sfx.impact_sound_for("fire") == "sfx_explosion", "fire impact pops")
+	_expect(Sfx.impact_sound_for("ice") == "sfx_impact_ice", "ice impact shatters")
+	_expect(Sfx.impact_sound_for("lightning") == "sfx_impact_lightning", "lightning impact cracks")
+	_expect(Sfx.impact_sound_for("wind") == "sfx_impact_wind"
+			and Sfx.impact_sound_for("water") == "sfx_impact_wind"
+			and Sfx.impact_sound_for("nature") == "sfx_impact_wind",
+			"wind is the impact fallback")
 
 	# --- Pool: plays, reuses, and never exceeds the cap ---
 	Sfx.play("sfx_hit")

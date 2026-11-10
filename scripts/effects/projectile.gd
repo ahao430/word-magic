@@ -62,8 +62,8 @@ func _on_body_entered(body: Node2D) -> void:
 	if body != null and body.has_method("take_damage"):
 		var dir := velocity.normalized()
 		body.call("take_damage", spell.get("parameters", {}).get("damage", 0.0), dir)
-	# Impact recipe: fire pops, everything else thumps.
-	Sfx.play("sfx_explosion" if spell.get("element", "") == "fire" else "sfx_hit")
+	# Impact recipe (AGENTS.md §13): per-element landing sound.
+	Sfx.play(Sfx.impact_sound_for(spell.get("element", "fire")))
 	_explode()
 
 

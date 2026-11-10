@@ -65,3 +65,16 @@ static func cast_sound_for(element: String) -> String:
 		"lightning":
 			return "sfx_cast_lightning"
 	return "sfx_cast_wind"
+
+
+## Element -> impact recipe (AGENTS.md §13): fire pops, the others get
+## their own landing sound.
+static func impact_sound_for(element: String) -> String:
+	match element:
+		"fire":
+			return "sfx_explosion"
+		"ice":
+			return "sfx_impact_ice"
+		"lightning":
+			return "sfx_impact_lightning"
+	return "sfx_impact_wind"

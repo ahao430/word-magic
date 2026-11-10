@@ -13,7 +13,9 @@ const MAGIC := preload("res://scripts/magic/magic_facade.gd")
 @onready var cast_result: Label = $HUD/CastResult
 @onready var cast_input: LineEdit = $HUD/CastInput
 @onready var spellbook: PanelContainer = $HUD/Spellbook
-@onready var spellbook_list: VBoxContainer = $HUD/Spellbook/Margin/Rows/List
+@onready var spellbook_list: VBoxContainer = $HUD/Spellbook/Margin/Rows/ListScroll/List
+@onready var spellbook_filter: LineEdit = $HUD/Spellbook/Margin/Rows/FilterInput
+@onready var spellbook_empty: Label = $HUD/Spellbook/Margin/Rows/EmptyHint
 @onready var boss_bar: ProgressBar = $HUD/BossBar
 @onready var boss_label: Label = $HUD/BossLabel
 
@@ -28,6 +30,7 @@ func _ready() -> void:
 	# player interleaves correctly with tree canopies while walking.
 	player.reparent($World.get_entity_parent(), true)
 	cast_input.text_submitted.connect(_on_cast_submitted)
+	spellbook_filter.text_changed.connect(_on_spellbook_filter)
 	$World.boss_died.connect(func() -> void:
 		_toast("史莱姆王倒下了！森林深处恢复了平静", true))
 	GameManager.set_state(GameManager.GameState.PLAYING)
@@ -110,10 +113,26 @@ func _do_load() -> void:
 
 
 func _rebuild_codex_ui() -> void:
+	# Immediate free: queue_free lingers a frame and duplicates rows.
 	for child in spellbook_list.get_children():
-		child.queue_free()
+		child.free()
 	for row in spell_session.codex:
 		_add_codex_row(row)
+	spellbook_empty.visible = spell_session.codex.is_empty()
+	_apply_codex_filter()
+
+
+## Live filter: rows carry their search text as metadata; empty query
+## shows everything.
+func _on_spellbook_filter(_text: String) -> void:
+	_apply_codex_filter()
+
+
+func _apply_codex_filter() -> void:
+	var query := spellbook_filter.text.to_lower()
+	for row in spellbook_list.get_children():
+		var haystack := String(row.get_meta("filter", ""))
+		row.visible = query.is_empty() or query in haystack
 
 
 ## Rising token: only the newest toast's timer may clear the label.
@@ -155,12 +174,21 @@ func _on_cast_submitted(text: String) -> void:
 
 func _add_codex_row(spell: Dictionary) -> void:
 	var row := Label.new()
+	var element: String = spell.get("element", "")
 	row.text = "%s · %s · %s · %d 魔力" % [
 			spell.get("display", "?"),
-			_element_name(spell.get("element", "")),
+			_element_name(element),
 			spell.get("shape", "?"),
 			spell.get("cost", 0)]
+	# Searchable text: name + raw and localized element (火 / fire both
+	# match) + shape.
+	row.set_meta("filter", ("%s %s %s %s" % [
+			spell.get("display", ""),
+			element,
+			_element_name(element),
+			spell.get("shape", "")]).to_lower())
 	spellbook_list.add_child(row)
+	spellbook_empty.visible = spell_session.codex.is_empty()
 
 
 func _element_name(element: String) -> String:

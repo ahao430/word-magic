@@ -10,6 +10,7 @@ extends SceneTree
 const OUT_DIR := "res://assets/sprites/enemies"
 const SHADOW_OUT := "res://assets/sprites/effects/boss_shadow_28x12.png"
 const FRAMES_OUT := "res://assets/sprites/enemies/boss_frames.tres"
+const RING_OUT := "res://assets/sprites/effects/slam_warning_164.png"
 const W := 56
 const H := 44
 
@@ -30,7 +31,8 @@ func _init() -> void:
 	_save("boss_slime_idle_02", _blob(26.0, 13.5, 28.0, 28.5, 28))
 	_save_shadow()
 	_save_frames()
-	print("[boss] 2 sprites + shadow + frames saved to " + OUT_DIR)
+	_save_slam_warning()
+	print("[boss] 2 sprites + shadow + frames + slam ring saved to " + OUT_DIR)
 	quit()
 
 
@@ -99,6 +101,28 @@ func _save_shadow() -> void:
 	var err := img.save_png(SHADOW_OUT)
 	if err != OK:
 		push_error("[boss] shadow save failed")
+		quit(1)
+
+
+## Slam telegraph: a red danger ring matching the impact radius
+## (SLAM_RADIUS 80px), faint fill inside, hard ring at the boundary.
+func _save_slam_warning() -> void:
+	var size := 164
+	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	var center := Vector2(81.5, 81.5)  # pixel-center alignment
+	var ring := Color(0.92, 0.28, 0.22)
+	for y in size:
+		for x in size:
+			var d := Vector2(x - center.x, y - center.y).length()
+			if d > 80.0:
+				continue
+			if d > 73.0:
+				img.set_pixel(x, y, Color(ring.r, ring.g, ring.b, 0.85))
+			else:
+				img.set_pixel(x, y, Color(ring.r, ring.g, ring.b, 0.30))
+	var err := img.save_png(RING_OUT)
+	if err != OK:
+		push_error("[boss] slam ring save failed")
 		quit(1)
 
 

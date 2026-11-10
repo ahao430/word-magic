@@ -113,6 +113,16 @@ func _ready() -> void:
 
 	var boss: Node2D = main.get_node("World").get_boss()
 	if boss != null and is_instance_valid(boss):
+		# Catch a wind-up frame so the telegraph ring is in the shot —
+		# mid-wind-up, once the squash and ring pulse are readable.
+		for i in 400:
+			await RenderingServer.frame_post_draw
+			if int(boss.get("state")) == 2:
+				for j in 24:
+					await RenderingServer.frame_post_draw
+				break
+		_capture("/tmp/wm_boss_windup.png")
+		print("[shot] boss windup saved")
 		boss.call("take_damage", 999.0, Vector2.RIGHT)
 	for i in 12:
 		await RenderingServer.frame_post_draw

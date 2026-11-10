@@ -34,9 +34,11 @@ var _state_timer := 0.0
 var _dash_dir := Vector2.ZERO
 var _player: Node2D = null
 var _visual_tween: Tween = null
+var _ring_tween: Tween = null
 
 
 @onready var sprite: AnimatedSprite2D = $BossSprite
+@onready var telegraph: Sprite2D = $Telegraph
 
 
 func _physics_process(delta: float) -> void:
@@ -100,6 +102,7 @@ func take_damage(amount: float, from_dir: Vector2) -> void:
 ## Area damage on landing: one hit to everything close by (the player's
 ## invulnerability window prevents rapid re-hits).
 func _slam_impact() -> void:
+	telegraph.visible = false
 	Sfx.play("sfx_slam")
 	if _player != null \
 			and global_position.distance_to(_player.global_position) <= SLAM_RADIUS \
@@ -113,6 +116,7 @@ func _die() -> void:
 	aggro = false
 	set_physics_process(false)
 	velocity = Vector2.ZERO
+	telegraph.visible = false
 	_kill_visual_tween()
 	Sfx.play("sfx_boss_die")
 	died.emit()
@@ -129,6 +133,7 @@ func _enter(next: State) -> void:
 	match next:
 		State.DORMANT:
 			_state_timer = 0.0
+			telegraph.visible = false
 			_visual_tween = create_tween()
 			_visual_tween.tween_property(sprite, "scale", Vector2.ONE, 0.3)
 		State.CHASE:
@@ -139,6 +144,16 @@ func _enter(next: State) -> void:
 			# can sidestep during the telegraph.
 			if _player != null:
 				_dash_dir = (_player.global_position - global_position).normalized()
+			# Predicted landing ring (top_level: world coords, does not
+			# ride along once the dash starts).
+			telegraph.global_position = global_position \
+					+ _dash_dir * (DASH_SPEED * SLAM_TIME)
+			telegraph.visible = true
+			telegraph.modulate.a = 0.55
+			# Blink pulse: motion reads as "incoming", not decoration.
+			_ring_tween = create_tween().set_loops(3)
+			_ring_tween.tween_property(telegraph, "modulate:a", 1.0, 0.12)
+			_ring_tween.tween_property(telegraph, "modulate:a", 0.55, 0.12)
 			_visual_tween = create_tween()
 			_visual_tween.tween_property(sprite, "scale", Vector2(1.15, 0.75), WINDUP_TIME)
 		State.SLAM:
@@ -155,6 +170,9 @@ func _kill_visual_tween() -> void:
 	if _visual_tween != null and _visual_tween.is_valid():
 		_visual_tween.kill()
 	_visual_tween = null
+	if _ring_tween != null and _ring_tween.is_valid():
+		_ring_tween.kill()
+	_ring_tween = null
 
 
 func _find_player() -> Node2D:

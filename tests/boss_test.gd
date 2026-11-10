@@ -143,6 +143,37 @@ func _run() -> void:
 			"full skill cycle observed (w=%s s=%s r=%s c=%s)" % [saw_windup, saw_slam, saw_recover, back_to_chase])
 	dummy.queue_free()
 
+	# --- Telegraph ring: hidden at rest, visible through wind-up at the
+	# predicted landing spot, gone after impact ---
+	var lab := Node2D.new()
+	lab.name = "TelegraphLab"
+	root.add_child(lab)
+	var boss3: CharacterBody2D = load("res://scenes/enemies/boss_slime.tscn").instantiate()
+	boss3.position = Vector2.ZERO
+	lab.add_child(boss3)
+	var target := CharacterBody2D.new()
+	target.name = "Player"
+	target.position = Vector2(190, 0)  # inside aggro, but 3s of chase cannot close it fully
+	lab.add_child(target)
+	await physics_frame
+	var ring: Node2D = boss3.get_node("Telegraph")
+	_expect(not ring.visible, "ring hidden while dormant")
+	var ring_ok := false
+	var ring_dist := -1.0
+	var ring_hidden_after := false
+	for i in 500:
+		await physics_frame
+		var s: int = int(boss3.get("state"))
+		if s == 2 and ring.visible:
+			ring_dist = ring.global_position.distance_to(boss3.global_position)
+			ring_ok = absf(ring_dist - 152.0) < 3.0
+		elif s == 4 and ring_dist >= 0.0:
+			ring_hidden_after = not ring.visible
+			break
+	_expect(ring_ok, "ring marks the predicted landing (%.0f px ahead)" % ring_dist)
+	_expect(ring_hidden_after, "ring clears after the slam lands")
+	lab.queue_free()
+
 	# --- Slam area damage: near hurts 12, far is safe ---
 	var holder := Node2D.new()
 	holder.name = "SlamLab"

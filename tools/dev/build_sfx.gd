@@ -9,6 +9,7 @@ extends SceneTree
 ##   sfx_cast_fire / ice / lightning / wind
 ##   sfx_hit / sfx_explosion / sfx_hurt / sfx_puzzle
 ##   sfx_slam / sfx_boss_die
+##   sfx_impact_ice / lightning / wind  (fire keeps sfx_explosion)
 
 const OUT_DIR := "res://assets/audio/sfx"
 const RATE := 22050
@@ -25,7 +26,10 @@ func _init() -> void:
 	_save("sfx_puzzle", 0.60, _puzzle)
 	_save("sfx_slam", 0.42, _slam)
 	_save("sfx_boss_die", 0.75, _boss_die)
-	print("[sfx] 10 streams saved to " + OUT_DIR)
+	_save("sfx_impact_ice", 0.22, _impact_ice)
+	_save("sfx_impact_lightning", 0.20, _impact_lightning)
+	_save("sfx_impact_wind", 0.25, _impact_wind)
+	print("[sfx] 13 streams saved to " + OUT_DIR)
 	quit()
 
 
@@ -135,3 +139,28 @@ func _boss_die(t: float, _i: int) -> float:
 	var f := 130.0 - 80.0 * t / 0.75
 	var wobble := sin(TAU * f * t + 2.2 * sin(TAU * 6.0 * t))
 	return clampf(wobble * _env(t, 0.02, 3.2) * 0.9, -1.0, 1.0)
+
+
+func _impact_ice(t: float, i: int) -> float:
+	# Glassy shatter: high partials gated by crackle, fast decay.
+	var shard := sin(TAU * 1976.0 * t) * 0.4 + sin(TAU * 2637.0 * t) * 0.3 \
+			+ sin(TAU * 3520.0 * t) * 0.2
+	var gate := 1.0 if _noise(i, 53) > -0.2 else 0.25
+	return clampf(shard * gate * _env(t, 0.003, 16.0) * 2.0, -1.0, 1.0)
+
+
+func _impact_lightning(t: float, i: int) -> float:
+	# Mid crack: swept square burst plus dense crackle.
+	var f := 480.0 - 260.0 * t / 0.2
+	var square := 1.0 if fmod(t * f, 1.0 / f) < 0.5 / f else -1.0
+	var crackle := _noise(i, 61) * (1.0 if fmod(t, 0.015) < 0.008 else 0.35)
+	return clampf((square * 0.3 + crackle * 0.45) * _env(t, 0.002, 15.0), -1.0, 1.0)
+
+
+func _impact_wind(t: float, i: int) -> float:
+	# Soft poof: brown-ish noise cushion with a short low thump.
+	var brown := 0.0
+	for k in 4:
+		brown += _noise(i + k * 811, 71 + k) / 4.0
+	var thump := sin(TAU * (180.0 - 90.0 * t / 0.25) * t) * 0.25
+	return clampf(brown * _env(t, 0.01, 12.0) * 1.5 + thump * _env(t, 0.004, 14.0), -1.0, 1.0)
