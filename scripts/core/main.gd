@@ -14,6 +14,8 @@ const MAGIC := preload("res://scripts/magic/magic_facade.gd")
 @onready var cast_input: LineEdit = $HUD/CastInput
 @onready var spellbook: PanelContainer = $HUD/Spellbook
 @onready var spellbook_list: VBoxContainer = $HUD/Spellbook/Margin/Rows/List
+@onready var boss_bar: ProgressBar = $HUD/BossBar
+@onready var boss_label: Label = $HUD/BossLabel
 
 ## One spell session per adventure (uniqueness + codex).
 var spell_session := SpellSession.new()
@@ -26,6 +28,8 @@ func _ready() -> void:
 	# player interleaves correctly with tree canopies while walking.
 	player.reparent($World.get_entity_parent(), true)
 	cast_input.text_submitted.connect(_on_cast_submitted)
+	$World.boss_died.connect(func() -> void:
+		_toast("史莱姆王倒下了！森林深处恢复了平静", true))
 	GameManager.set_state(GameManager.GameState.PLAYING)
 	# One frame late: attaching the music player during _ready makes the
 	# busy root reject add_child.
@@ -44,6 +48,21 @@ func _process(_delta: float) -> void:
 		_do_save()
 	if Input.is_action_just_pressed("load_game"):
 		_do_load()
+	_update_boss_bar()
+
+
+## Boss health bar: visible only while the Slime King is alive and
+## aggro'd (duck-typed reads keep the HUD decoupled from the boss class).
+func _update_boss_bar() -> void:
+	var show_bar := false
+	var boss: Node2D = $World.get_boss()
+	if boss != null and is_instance_valid(boss) and bool(boss.get("alive")) \
+			and bool(boss.get("aggro")):
+		boss_bar.max_value = float(boss.get("hp_max"))
+		boss_bar.value = float(boss.get("hp"))
+		show_bar = true
+	boss_bar.visible = show_bar
+	boss_label.visible = show_bar
 
 
 func _do_save() -> void:

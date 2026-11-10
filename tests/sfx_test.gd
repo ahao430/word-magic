@@ -6,6 +6,7 @@ extends SceneTree
 const NAMES := [
 	"sfx_cast_fire", "sfx_cast_ice", "sfx_cast_lightning", "sfx_cast_wind",
 	"sfx_hit", "sfx_explosion", "sfx_hurt", "sfx_puzzle",
+	"sfx_slam", "sfx_boss_die",
 ]
 
 var _failures := 0

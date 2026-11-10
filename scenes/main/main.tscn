@@ -9,6 +9,20 @@
 [sub_resource type="RectangleShape2D" id="shape_body"]
 size = Vector2(16, 16)
 
+[sub_resource type="StyleBoxFlat" id="boss_bar_bg"]
+bg_color = Color(0.13, 0.11, 0.08, 0.8)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="boss_bar_fill"]
+bg_color = Color(0.95, 0.78, 0.25, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
 
@@ -78,6 +92,27 @@ offset_top = 74.0
 offset_right = 320.0
 offset_bottom = 98.0
 text = "生命"
+
+[node name="BossLabel" type="Label" parent="HUD"]
+visible = false
+offset_left = 360.0
+offset_top = 46.0
+offset_right = 600.0
+offset_bottom = 68.0
+text = "史莱姆王"
+horizontal_alignment = 1
+
+[node name="BossBar" type="ProgressBar" parent="HUD"]
+visible = false
+offset_left = 360.0
+offset_top = 70.0
+offset_right = 600.0
+offset_bottom = 92.0
+theme_override_styles/background = SubResource("boss_bar_bg")
+theme_override_styles/fill = SubResource("boss_bar_fill")
+max_value = 120.0
+value = 120.0
+show_percentage = false
 
 [node name="CastResult" type="Label" parent="HUD"]
 offset_left = 340.0

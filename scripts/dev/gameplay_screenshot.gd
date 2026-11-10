@@ -90,6 +90,26 @@ func _ready() -> void:
 	_capture("/tmp/wm_river_t1.png")
 	print("[shot] river t1 saved")
 
+	# Boss encounter: step into the NE arena, catch the king aggro'd with
+	# the HUD health bar, then defeat him and catch the toast + death pose.
+	player.position = Vector2(38 * 32 + 16, 8 * 32 + 26) + Vector2(-140, 60)
+	for i in 40:
+		await RenderingServer.frame_post_draw
+	_capture("/tmp/wm_boss_aggro.png")
+	print("[shot] boss aggro saved")
+
+	var boss: Node2D = main.get_node("World").get_boss()
+	if boss != null and is_instance_valid(boss):
+		boss.call("take_damage", 999.0, Vector2.RIGHT)
+	for i in 12:
+		await RenderingServer.frame_post_draw
+	_capture("/tmp/wm_boss_dying.png")
+	print("[shot] boss dying saved")
+	for i in 50:
+		await RenderingServer.frame_post_draw
+	_capture("/tmp/wm_boss_defeated.png")
+	print("[shot] boss defeated saved")
+
 	get_tree().quit()
 
 

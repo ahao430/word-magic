@@ -1,0 +1,20 @@
+[gd_resource type="SpriteFrames" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/boss_slime_idle_01.png" id="1_bf01"]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/boss_slime_idle_02.png" id="2_bf02"]
+
+[resource]
+resource_name = "BossSlimeFrames"
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_bf01")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_bf02")
+}],
+"loop": 1,
+"name": &"default",
+"speed": 2.0
+}]

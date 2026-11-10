@@ -16,8 +16,10 @@
 | 玩家角色精灵（12 帧 + SpriteFrames） | `assets/sprites/player/*.png`、`player_frames.tres` | 程序化合成（`tools/dev/build_player_sprites.gd`） | 同上 | 未确认 | 无 | 程序化生成，真 Alpha 裁切 |
 | 元素法球（投射物基底） | `assets/sprites/effects/orb_16.png` | 程序化合成（`tools/dev/build_orb_sprite.gd`） | 同上 | 未确认 | 无 | 白色径向法球，运行时按元素调制颜色 |
 | 史莱姆精灵（2 帧弹跳 + SpriteFrames） | `assets/sprites/enemies/*.png`、`slime_frames.tres` | 程序化合成（`tools/dev/build_slime_sprites.gd`） | 同上 | 未确认 | 无 | 程序化生成，真 Alpha 裁切 |
+| 史莱姆王 Boss 精灵（2 帧重弹跳 + 王冠 + SpriteFrames） | `assets/sprites/enemies/boss_slime_idle_*.png`、`boss_frames.tres` | 程序化合成（`tools/dev/build_boss_sprites.gd`，配色为史莱姆深色变体） | 同上 | 未确认 | 无 | 程序化生成，金色王冠 + 红宝石，真 Alpha 裁切 |
+| Boss 大型阴影 | `assets/sprites/effects/boss_shadow_28x12.png` | 程序化合成（`tools/dev/build_boss_sprites.gd`） | 同上 | 无需 | 无 | 28×12 径向 Alpha 椭圆（同 shadow_16x8 配方放大） |
 | 符文石精灵（休眠/苏醒 两态） | `assets/sprites/puzzles/rune_*.png` | 程序化合成（`tools/dev/build_rune_sprites.gd`） | 同上 | 未确认 | 无 | 程序化生成，刻痕符文双色 |
-| 音效 ×8（施法/命中/爆炸/受伤/机关） | `assets/audio/sfx/*.tres` | 程序化合成（`tools/dev/build_sfx.gd`，AudioStreamWAV 正弦/噪声合成） | 程序化生成（无外部来源） | 无需 | 无 | 确定性合成，可复现 |
+| 音效 ×10（施法/命中/爆炸/受伤/机关/Boss 落地与死亡） | `assets/audio/sfx/*.tres` | 程序化合成（`tools/dev/build_sfx.gd`，AudioStreamWAV 正弦/噪声合成） | 程序化生成（无外部来源） | 无需 | 无 | 确定性合成，可复现 |
 | 柔和阴影精灵 | `assets/sprites/effects/shadow_16x8.png` | 程序化合成（`tools/dev/build_shadow_sprite.gd`） | 同上 | 无需 | 无 | 径向 Alpha 渐变椭圆 |
 | 瀑布纹理（滚动动画用） | `assets/sprites/effects/waterfall_32x64.png` | 程序化合成（`tools/dev/build_waterfall_sprite.gd`，垂直可平铺） | 同上 | 无需 | 无 | 纵向条纹 + 64px 周期无缝衔接 |
 | 探索 BGM（24s 循环） | `assets/audio/music/explore_loop.tres` | 程序化合成（`tools/dev/build_bgm.gd`，和弦铺底+五声琶音） | 同上 | 无需 | 无 | 确定性合成，LOOP_FORWARD |

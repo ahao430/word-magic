@@ -49,12 +49,20 @@ const SLIME_MIN_SPAWN_DISTANCE := 6.0
 const RUNE_STONE_CELL := Vector2i(13, 12)
 const FORD_ROW := 12
 
+## Boss arena: the Slime King holds a cleared clearing in the far NE.
+const BOSS_CELL := Vector2i(38, 8)
+
+## Fired once when the boss dies (the boss_defeated flag + save tier
+## record it; this notifies the HUD).
+signal boss_died
+
 
 @onready var ground: TileMapLayer = $GroundLayer
 @onready var props: Node2D = $Props
 
 ## Session world state (saved/restored with the session save).
 var ford_built := false
+var boss_defeated := false
 
 ## Open-water shimmer: the 4 surface variants cycle slowly; per-cell
 ## phase offset keeps the swap from looking like a global strobe.
@@ -82,6 +90,7 @@ func _ready() -> void:
 	_paint_ground(dirt_cell, water_cell, macro, detail)
 	_scatter_props(compute_placements(dirt_cell, water_cell, MAP_CELLS, PROP_SEED))
 	_scatter_slimes(dirt_cell, water_cell)
+	_spawn_boss()
 	_setup_puzzle()
 	_build_walls()
 	_setup_water_shimmer(water_cell)
@@ -323,8 +332,8 @@ func build_ford() -> void:
 
 ## --- Session save/load (world tier) ---
 
-## Capture: rune state, ford, and which slimes are still alive (the
-## scatter is deterministic, so names identify individuals).
+## Capture: rune state, ford, which slimes are still alive (the scatter
+## is deterministic, so names identify individuals), and the boss tier.
 func capture_state() -> Dictionary:
 	var rune_state := 0
 	var alive_slimes := []
@@ -333,11 +342,24 @@ func capture_state() -> Dictionary:
 			rune_state = child.state
 		elif child is CharacterBody2D and child.name.begins_with("Slime_"):
 			alive_slimes.append(child.name)
-	return {"rune_state": rune_state, "ford_built": ford_built, "alive_slimes": alive_slimes}
+	return {"rune_state": rune_state, "ford_built": ford_built,
+			"alive_slimes": alive_slimes, "boss": _capture_boss()}
+
+
+func _capture_boss() -> Dictionary:
+	var boss_state := {"defeated": boss_defeated, "alive": false}
+	var boss := get_boss()
+	if boss != null and is_instance_valid(boss) and bool(boss.get("alive")):
+		boss_state["alive"] = true
+		boss_state["hp"] = float(boss.get("hp"))
+		boss_state["x"] = boss.global_position.x
+		boss_state["y"] = boss.global_position.y
+	return boss_state
 
 
 ## Restore after the deterministic world rebuild: replay the ford,
-## re-awaken the rune silently, remove slimes that died before saving.
+## re-awaken the rune silently, remove slimes that died before saving,
+## and re-seat the boss (position/hp, or gone if he was defeated).
 func restore_state(data: Dictionary) -> void:
 	if data.get("ford_built", false):
 		build_ford()
@@ -349,6 +371,17 @@ func restore_state(data: Dictionary) -> void:
 		if child is CharacterBody2D and child.name.begins_with("Slime_"):
 			if not alive.has(child.name):
 				child.queue_free()
+	var boss_data: Dictionary = data.get("boss", {})
+	boss_defeated = bool(boss_data.get("defeated", false))
+	var boss := get_boss()
+	if boss == null or not is_instance_valid(boss):
+		return
+	if not boss_data.get("alive", true):
+		boss.queue_free()
+		return
+	boss.set("hp", float(boss_data.get("hp", 120.0)))
+	boss.global_position = Vector2(float(boss_data.get("x", boss.global_position.x)),
+			float(boss_data.get("y", boss.global_position.y)))
 
 
 func _scatter_slimes(dirt_cell: Dictionary, water_cell: Dictionary) -> void:
@@ -375,6 +408,37 @@ func _scatter_slimes(dirt_cell: Dictionary, water_cell: Dictionary) -> void:
 				slime.position = Vector2(cell) * 32.0 + Vector2(16.0, 24.0)
 				props.add_child(slime)
 				placed += 1
+
+
+func _spawn_boss() -> void:
+	## Clear a small arena around the throne cell so the king is visible
+	## and reachable, then seat him (feet just above the tile bottom).
+	for child in props.get_children():
+		var is_blocking_prop: bool = child.name.begins_with("Tree_") or child.name.begins_with("Rock_")
+		if not is_blocking_prop:
+			continue
+		var cell := Vector2i(int(child.position.x) / 32, int(child.position.y - 16) / 32)
+		if absi(cell.x - BOSS_CELL.x) <= 1 and absi(cell.y - BOSS_CELL.y) <= 1:
+			child.queue_free()
+	var boss: CharacterBody2D = load("res://scenes/enemies/boss_slime.tscn").instantiate()
+	boss.name = "BossSlime"
+	boss.position = Vector2(BOSS_CELL) * 32.0 + Vector2(16.0, 26.0)
+	props.add_child(boss)
+	# String connect: the boss script's signal is invisible to the typed
+	# CharacterBody2D reference.
+	boss.connect("died", _on_boss_died)
+
+
+func _on_boss_died() -> void:
+	boss_defeated = true
+	boss_died.emit()
+
+
+## Boss accessor for the HUD health bar (duck-typed reads keep this
+## independent of the boss script class).
+func get_boss() -> Node2D:
+	var boss := props.get_node_or_null("BossSlime")
+	return boss
 
 
 func _scatter_props(placements: Array[Dictionary]) -> void:

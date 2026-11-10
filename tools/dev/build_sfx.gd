@@ -8,6 +8,7 @@ extends SceneTree
 ## Output: assets/audio/sfx/<name>.tres
 ##   sfx_cast_fire / ice / lightning / wind
 ##   sfx_hit / sfx_explosion / sfx_hurt / sfx_puzzle
+##   sfx_slam / sfx_boss_die
 
 const OUT_DIR := "res://assets/audio/sfx"
 const RATE := 22050
@@ -22,7 +23,9 @@ func _init() -> void:
 	_save("sfx_explosion", 0.50, _explosion)
 	_save("sfx_hurt", 0.20, _hurt)
 	_save("sfx_puzzle", 0.60, _puzzle)
-	print("[sfx] 8 streams saved to " + OUT_DIR)
+	_save("sfx_slam", 0.42, _slam)
+	_save("sfx_boss_die", 0.75, _boss_die)
+	print("[sfx] 10 streams saved to " + OUT_DIR)
 	quit()
 
 
@@ -118,3 +121,17 @@ func _puzzle(t: float, _i: int) -> float:
 	var b := sin(TAU * 784.0 * (t - 0.18)) * _env(t - 0.18, 0.01, 6.0) if t > 0.18 else 0.0
 	var shimmer := sin(TAU * 1568.0 * t) * 0.15 * _env(t, 0.2, 3.0)
 	return clampf((a + b) * 0.6 + shimmer, -1.0, 1.0)
+
+
+func _slam(t: float, i: int) -> float:
+	# Boss landing: sub-bass body thump plus a dirt-noise burst.
+	var boom := sin(TAU * (60.0 - 35.0 * t / 0.42) * t)
+	var burst := _noise(i, 41) * 0.8 * _env(t, 0.002, 22.0)
+	return clampf(tanh(boom * 3.0) * _env(t, 0.004, 7.0) + burst * 0.5, -1.0, 1.0)
+
+
+func _boss_die(t: float, _i: int) -> float:
+	# The king deflates: a slow descending pitch wobble.
+	var f := 130.0 - 80.0 * t / 0.75
+	var wobble := sin(TAU * f * t + 2.2 * sin(TAU * 6.0 * t))
+	return clampf(wobble * _env(t, 0.02, 3.2) * 0.9, -1.0, 1.0)
