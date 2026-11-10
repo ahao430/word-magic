@@ -29,16 +29,26 @@ func _ready() -> void:
 	_capture(SHOT_B)
 	print("[shot] moved saved")
 
-	# Cast a fireball to the right of the player and catch it in flight.
+	# Cast a fireball at a slime placed right of the player and catch
+	# the impact frame.
 	var player: CharacterBody2D = null
 	for child in main.get_node("World").get_entity_parent().get_children():
-		if child is CharacterBody2D:
+		if child is CharacterBody2D and child.name == "Player":
 			player = child
 			break
+	var slime: CharacterBody2D = load("res://scenes/enemies/slime.tscn").instantiate()
+	slime.position = player.global_position + Vector2(150, 0)
+	main.get_node("World").get_entity_parent().add_child(slime)
+	await RenderingServer.frame_post_draw
+
+	Input.action_press("move_right")
+	await RenderingServer.frame_post_draw
+	Input.action_release("move_right")
+
 	var result: Dictionary = MAGIC.cast("火球术", player, main.get_node("World"))
 	print("[shot] cast: ", result["message"], " cost ", result["cost"])
-	await RenderingServer.frame_post_draw
-	await RenderingServer.frame_post_draw
+	for i in 18:
+		await RenderingServer.frame_post_draw  # ~impact at 150px / 300px/s
 	_capture(SHOT_C)
 	print("[shot] cast saved")
 

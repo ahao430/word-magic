@@ -7,6 +7,7 @@ const MAGIC := preload("res://scripts/magic/magic_facade.gd")
 
 @onready var player: CharacterBody2D = $Player
 @onready var mana_bar: ProgressBar = $HUD/ManaBar
+@onready var hp_bar: ProgressBar = $HUD/HpBar
 @onready var cast_result: Label = $HUD/CastResult
 @onready var cast_input: LineEdit = $HUD/CastInput
 
@@ -23,6 +24,7 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	mana_bar.value = player.mana
+	hp_bar.value = player.hp
 
 
 func _on_cast_submitted(text: String) -> void:

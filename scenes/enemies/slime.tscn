@@ -1,0 +1,25 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/slime.gd" id="1_slime"]
+
+[ext_resource type="SpriteFrames" path="res://assets/sprites/enemies/slime_frames.tres" id="2_frames"]
+
+[sub_resource type="RectangleShape2D" id="shape_slime"]
+size = Vector2(18, 14)
+
+[node name="Slime" type="CharacterBody2D"]
+y_sort_origin = 10.0
+collision_layer = 4
+collision_mask = 1
+motion_mode = 1
+script = ExtResource("1_slime")
+
+[node name="SlimeSprite" type="AnimatedSprite2D" parent="."]
+sprite_frames = ExtResource("2_frames")
+animation = &"default"
+autoplay = "default"
+offset = Vector2(0, -10)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 3)
+shape = SubResource("shape_slime")

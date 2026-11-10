@@ -1,0 +1,19 @@
+[gd_resource type="SpriteFrames" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/slime_idle_01.png" id="1_fa5t5"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/slime_idle_02.png" id="2_6dsip"]
+
+[resource]
+resource_name = "SlimeFrames"
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_fa5t5")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_6dsip")
+}],
+"loop": 1,
+"name": &"default",
+"speed": 3.0
+}]

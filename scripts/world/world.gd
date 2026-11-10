@@ -40,6 +40,10 @@ const PROP_CHANCE := {
 const SPAWN_CELL := Vector2i(24, 16)
 const SPAWN_CLEAR_RADIUS := 2.5
 const PROP_SEED := 20261112
+const SLIME_COUNT := 8
+const SLIME_SEED := 777
+const SLIME_MIN_SPAWN_DISTANCE := 6.0
+
 
 @onready var ground: TileMapLayer = $GroundLayer
 @onready var props: Node2D = $Props
@@ -57,6 +61,7 @@ func _ready() -> void:
 	var water_cell := river_cells()
 	_paint_ground(dirt_cell, water_cell, macro, detail)
 	_scatter_props(compute_placements(dirt_cell, water_cell, MAP_CELLS, PROP_SEED))
+	_scatter_slimes(dirt_cell, water_cell)
 	_build_walls()
 
 
@@ -193,6 +198,32 @@ func _bit_for(offset: Vector2i) -> int:
 	if offset == Vector2i.DOWN:
 		return BIT_S
 	return BIT_W
+
+
+func _scatter_slimes(dirt_cell: Dictionary, water_cell: Dictionary) -> void:
+	## Deterministic slime scatter: land cells away from the spawn area.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = SLIME_SEED
+	var placed := 0
+	for y in MAP_CELLS.y:
+		if placed >= SLIME_COUNT:
+			break
+		for x in MAP_CELLS.x:
+			if placed >= SLIME_COUNT:
+				break
+			var cell := Vector2i(x, y)
+			if water_cell.has(cell) or dirt_cell.get(cell, false):
+				continue
+			if x == SPAWN_CELL.x or y == SPAWN_CELL.y:
+				continue
+			if Vector2(cell - SPAWN_CELL).length() < SLIME_MIN_SPAWN_DISTANCE:
+				continue
+			if rng.randf() < 0.02:
+				var slime: CharacterBody2D = load("res://scenes/enemies/slime.tscn").instantiate()
+				slime.name = "Slime_%d_%d" % [cell.x, cell.y]
+				slime.position = Vector2(cell) * 32.0 + Vector2(16.0, 24.0)
+				props.add_child(slime)
+				placed += 1
 
 
 func _scatter_props(placements: Array[Dictionary]) -> void:

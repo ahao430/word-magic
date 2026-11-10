@@ -42,6 +42,23 @@ offset_right = 320.0
 offset_bottom = 70.0
 text = "魔力"
 
+[node name="HpBar" type="ProgressBar" parent="HUD"]
+modulate = Color(1, 0.6, 0.6, 1)
+offset_left = 16.0
+offset_top = 72.0
+offset_right = 216.0
+offset_bottom = 96.0
+max_value = 30.0
+value = 30.0
+show_percentage = false
+
+[node name="HpLabel" type="Label" parent="HUD"]
+offset_left = 222.0
+offset_top = 74.0
+offset_right = 320.0
+offset_bottom = 98.0
+text = "生命"
+
 [node name="CastResult" type="Label" parent="HUD"]
 offset_left = 340.0
 offset_top = 636.0

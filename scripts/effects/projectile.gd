@@ -45,7 +45,7 @@ static func spawn(spell_data: Dictionary, origin: Vector2, direction: Vector2, p
 
 func _ready() -> void:
 	sprite.modulate = ELEMENT_TINT.get(spell.get("element", "fire"), Color.WHITE)
-	body_entered.connect(_explode)
+	body_entered.connect(_on_body_entered)
 
 
 func _physics_process(delta: float) -> void:
@@ -55,10 +55,20 @@ func _physics_process(delta: float) -> void:
 		_explode()
 
 
-func _explode(_body: Node = null) -> void:
+## Damage application lives here (gameplay execution in Godot), driven
+## purely by the validated spell data payload.
+func _on_body_entered(body: Node2D) -> void:
+	if body != null and body.has_method("take_damage"):
+		var dir := velocity.normalized()
+		body.call("take_damage", spell.get("parameters", {}).get("damage", 0.0), dir)
+	_explode()
+
+
+func _explode() -> void:
 	# Placeholder impact: the orb pops with a quick scale-and-fade puff.
 	set_physics_process(false)
-	monitoring = false
+	# Deferred: mutating monitoring inside a physics signal is blocked.
+	set_deferred("monitoring", false)
 	var tween := create_tween()
 	tween.tween_property(sprite, "scale", Vector2(3.0, 3.0), 0.18)
 	tween.parallel().tween_property(sprite, "modulate:a", 0.0, 0.18)
