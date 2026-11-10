@@ -25,7 +25,8 @@ func _init() -> void:
 	var source := TileSetAtlasSource.new()
 	source.texture = texture
 	source.texture_region_size = Vector2i(32, 32)
-	for i in 8:
+	# 4 cols x 6 rows: 8 base tiles + 16 transition tiles (rows 2-5).
+	for i in 24:
 		source.create_tile(Vector2i(i % 4, floori(i / 4.0)))
 	tileset.add_source(source, 0)
 

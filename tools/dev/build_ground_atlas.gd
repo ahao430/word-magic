@@ -1,30 +1,45 @@
 extends SceneTree
-## One-shot: pack the 8 production ground tiles into a single 128x64
-## atlas PNG (4 cols x 2 rows, no gutters) for the forest TileSet.
+## One-shot: pack the atlas for the forest ground TileSet.
 ##
 ##   godot --headless --path . -s res://tools/dev/build_ground_atlas.gd
+##
+## Layout: 4 columns x 6 rows of 32px tiles (128 x 192).
+##   rows 0-1: the 8 base ground tiles (grass/dirt/stone variants)
+##   rows 2-5: 16 procedural grass->dirt transition tiles, index ==
+##             side bitmask (N=1, E=2, S=4, W=8); row = 2 + mask/4
 ##
 ## Run `--import` afterwards so the atlas gets import metadata before
 ## build_tileset.gd loads it.
 
 const TILE_DIR := "res://assets/tilesets/forest/ground"
-const TILE_NAMES := [
+const BASE_TILE_NAMES := [
 	"grass_plain", "grass_dense", "grass_flowers", "dirt_plain",
 	"dirt_variant", "dirt_grassy_edge", "stone_paving", "stone_moss",
 ]
 const TILE := 32
+const COLS := 4
+const ROWS := 6
+
+const TRANSITIONS := preload("res://tools/dev/transition_tiles.gd")
 
 
 func _init() -> void:
-	var atlas := Image.create(TILE * 4, TILE * 2, false, Image.FORMAT_RGBA8)
-	for i in TILE_NAMES.size():
-		var tex: Texture2D = load("%s/%s.png" % [TILE_DIR, TILE_NAMES[i]])
-		var img := tex.get_image()
-		atlas.blit_rect(img, Rect2i(Vector2i.ZERO, Vector2i(TILE, TILE)),
-				Vector2i((i % 4) * TILE, floori(i / 4.0) * TILE))
+	var tiles: Array[Image] = []
+	for name in BASE_TILE_NAMES:
+		var tex: Texture2D = load("%s/%s.png" % [TILE_DIR, name])
+		tiles.append(tex.get_image())
+	tiles.append_array(TRANSITIONS.generate())
+	assert(tiles.size() == COLS * ROWS)
+
+	var atlas := Image.create(TILE * COLS, TILE * ROWS, false, Image.FORMAT_RGBA8)
+	for i in tiles.size():
+		atlas.blit_rect(tiles[i], Rect2i(Vector2i.ZERO, Vector2i(TILE, TILE)),
+				Vector2i((i % COLS) * TILE, floori(i / float(COLS)) * TILE))
+
 	var err := atlas.save_png("%s/forest_ground_atlas.png" % TILE_DIR)
 	if err != OK:
 		push_error("[atlas] save failed: %s" % err)
-	else:
-		print("[atlas] saved %s/forest_ground_atlas.png (128x64)" % TILE_DIR)
+		quit(1)
+		return
+	print("[atlas] saved %s/forest_ground_atlas.png (%dx%d)" % [TILE_DIR, TILE * COLS, TILE * ROWS])
 	quit()
