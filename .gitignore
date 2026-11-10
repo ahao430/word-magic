@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+
+# Godot 4 editor cache (import metadata *.import files themselves ARE committed)
+.godot/
+*.translation
+
+# Build outputs
+builds/
+exports/
+*.zip
+
+# Tool/plugin working directories (not project content)
+.v2c/
+.video_agent/
+
+# Local editor / temp files
+*.swp
+*~
