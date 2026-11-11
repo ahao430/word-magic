@@ -66,6 +66,8 @@ save · sfx · water_anim · ambient · **boss(27)** · **world_memory(24)** · 
 - 退出期 ObjectDB 警告为已知良性项（音频流退出顺序，运行期零错误）。
 - Boss 无冲刺落点地面预警圈之外的逃生窗口提示（末段加深）；冻结对 Boss 无抗性。
 - 会话存档为单槽位（slot_01）；多槽位与槽位管理 UI 未做。
-- 导出打包（Phase 8）待安装官方导出模板（~1GB）后执行。
+- 导出打包已完成（c008770→1706a5a）：本地 macOS/Windows 双预设，CI 滚动 Release
+  （固定 tag `latest` + 固定文件名，覆盖安装）；macOS 为 ad-hoc 签名，首次打开需
+  右键→打开（无开发者证书）。
 - **AI Provider（Phase 5 后半）等待项目所有者提供 Base URL / API Key / 模型名**；
   密钥永不入库（AGENTS.md §8）。
