@@ -101,9 +101,14 @@ func _run() -> void:
 	# Restart path (wired, but invoked directly to keep current_scene sane).
 	paused = false
 
-	title.free()
-	main.free()
+	# Deferred teardown: this coroutine resumes inside a physics tick,
+	# and freeing whole scenes mid-flush aborts the engine on Linux
+	# (macOS silently tolerates it). (The old bare title.free() here was
+	# a silent no-op — that instance was already freed at line 48.)
+	main.queue_free()
 	paused = false
+	await physics_frame
+	await physics_frame
 	gm.pending_load_session = false
 	TestIsolation.unstash(TestIsolation.CACHE_PATH, _cache_backup)
 	TestIsolation.unstash(TestIsolation.MEMORY_PATH, _memory_backup)

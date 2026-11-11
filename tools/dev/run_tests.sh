@@ -96,6 +96,9 @@ for t in $SUITES; do
 	printf '%s %-22s %2ds  %s\n' "$TAG" "$t" "$DUR" "$(grep -c '^PASS' "$LOG") passes"
 	if [ "$TAG" = "BAD" ] || [ "$TAG" = "HANG" ]; then
 		grep -m 6 "FAIL\|SCRIPT ERROR\|Parse Error" "$LOG" | sed 's/^/      /'
+		# Crashes print no FAIL lines: show the raw tail so the abort
+		# point is visible in CI logs.
+		tail -n 6 "$LOG" | sed 's/^/      > /'
 	fi
 done
 

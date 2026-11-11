@@ -55,12 +55,17 @@ jobs:
           fi
           curl -sL -o godot.zip https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_macos.universal.zip
           unzip -q godot.zip
+          # Gatekeeper kills freshly-downloaded unsigned binaries on
+          # exec (exit 137): strip the quarantine flag first.
+          xattr -dr com.apple.quarantine Godot.app 2>/dev/null || true
+          xattr -dr com.apple.quarantine "Godot_v${GODOT_VERSION}-stable_macos.universal" 2>/dev/null || true
           BIN="Godot.app/Contents/MacOS/Godot"
           [ -f "$BIN" ] || BIN="Godot_v${GODOT_VERSION}-stable_macos.universal"
           sudo install -m 755 "$BIN" /usr/local/bin/godot
       - name: 导出 .app
         run: |
           godot --headless --path . --import
+          mkdir -p build
           godot --headless --path . --export-release "macOS" "build/Word Magic.app"
       - name: Ad-hoc 签名（本机直跑免右键）
         run: codesign --force --deep --sign - "build/Word Magic.app"
@@ -102,6 +107,7 @@ jobs:
         shell: pwsh
         run: |
           tools-bin\godot.exe --headless --path . --import
+          New-Item -ItemType Directory -Force -Path build | Out-Null
           tools-bin\godot.exe --headless --path . --export-release "Windows" "build\WordMagic.exe"
           Compress-Archive -Path build\WordMagic.exe -DestinationPath build\WordMagic-Windows-x64.zip -Force
       - uses: actions/upload-artifact@v4
