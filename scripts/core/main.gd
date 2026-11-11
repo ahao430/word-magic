@@ -20,6 +20,7 @@ const MAGIC := preload("res://scripts/magic/magic_facade.gd")
 @onready var boss_label: Label = $HUD/BossLabel
 @onready var slot_panel: Control = $HUD/SlotPanel
 @onready var mic_hint: Label = $HUD/MicHint
+@onready var weather_label: Label = $HUD/WeatherLabel
 @onready var voice_confirm: PanelContainer = $HUD/VoiceConfirm
 @onready var voice_transcript: Label = $HUD/VoiceConfirm/Margin/Rows/Transcript
 
@@ -87,6 +88,9 @@ func _process(_delta: float) -> void:
 		voice.talk_released()
 	if voice.is_recording_held() and not Input.is_action_pressed("voice_talk"):
 		voice.talk_released()
+	var band := Weather.wind_band()
+	weather_label.text = "天气：%s%s %s" % [Weather.describe(),
+			Weather.wind_arrow(), "" if band == "" else "·" + band + "风"]
 	_update_boss_bar()
 
 

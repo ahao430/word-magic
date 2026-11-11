@@ -67,7 +67,9 @@ func _physics_process(delta: float) -> void:
 
 
 func _tick_damage() -> void:
-	var damage: float = spell.get("parameters", {}).get("damage", 0.0)
+	var damage: float = Weather.scale_damage(
+			spell.get("parameters", {}).get("damage", 0.0),
+			spell.get("element", "ice"))
 	var mechanics: Array = spell.get("mechanics", [])
 	for body in get_overlapping_bodies():
 		if body == null or not body.has_method("take_damage"):

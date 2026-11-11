@@ -95,6 +95,7 @@ func _ready() -> void:
 	_build_walls()
 	_setup_water_shimmer(water_cell)
 	_setup_waterfall(water_cell)
+	_setup_weather()
 	_apply_world_memory()
 
 
@@ -258,6 +259,18 @@ func _setup_water_shimmer(water_cell: Dictionary) -> void:
 			_open_water.append(cell)
 
 
+## Weather runtime (AGENTS.md §10.1): the sole writer of the Weather
+## statics; session-saved with the world tier.
+func _setup_weather() -> void:
+	var weather: Node = load("res://scripts/world/weather_system.gd").new()
+	weather.name = "WeatherSystem"
+	add_child(weather)
+
+
+func get_weather() -> Node:
+	return get_node_or_null("WeatherSystem")
+
+
 func _setup_waterfall(water_cell: Dictionary) -> void:
 	## Animated waterfall curtain at the river's source (top rows).
 	var shader: Shader = load("res://shaders/waterfall_scroll.gdshader")
@@ -368,8 +381,11 @@ func capture_state() -> Dictionary:
 			rune_state = child.state
 		elif child is CharacterBody2D and child.name.begins_with("Slime_"):
 			alive_slimes.append(child.name)
+	var weather := get_weather()
+	var weather_state: Dictionary = weather.capture_state() if weather != null else {}
 	return {"rune_state": rune_state, "ford_built": ford_built,
-			"alive_slimes": alive_slimes, "boss": _capture_boss()}
+			"alive_slimes": alive_slimes, "boss": _capture_boss(),
+			"weather": weather_state}
 
 
 func _capture_boss() -> Dictionary:
@@ -397,6 +413,10 @@ func restore_state(data: Dictionary) -> void:
 		if child is CharacterBody2D and child.name.begins_with("Slime_"):
 			if not alive.has(child.name):
 				child.queue_free()
+	if data.has("weather") and not data["weather"].is_empty():
+		var weather := get_weather()
+		if weather != null:
+			weather.apply_state(data["weather"])
 	var boss_data: Dictionary = data.get("boss", {})
 	boss_defeated = bool(boss_data.get("defeated", false))
 	var boss := get_boss()

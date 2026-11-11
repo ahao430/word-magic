@@ -10,6 +10,10 @@ var velocity := Vector2.ZERO
 var lifetime := LIFETIME_DEFAULT
 var spell: Dictionary = {}
 
+## Ballistic wind: the effective velocity is base + wind offset, so a
+## storm's crosswind visibly bends every flying spell (Weather.gd).
+var _base_velocity := Vector2.ZERO
+
 @onready var sprite: Sprite2D = $Sprite2D
 
 # Lazily loaded: a static `load` of the scene that owns this script
@@ -39,6 +43,7 @@ static func spawn(spell_data: Dictionary, origin: Vector2, direction: Vector2, p
 	proj.position = origin
 	var speed: float = spell_data.get("parameters", {}).get("speed", SPEED_DEFAULT)
 	proj.velocity = direction.normalized() * speed
+	proj.set("_base_velocity", proj.velocity)
 	proj.lifetime = spell_data.get("parameters", {}).get("duration", LIFETIME_DEFAULT)
 	parent.add_child(proj)
 	return proj
@@ -51,6 +56,7 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	velocity = _base_velocity + Weather.wind_vector() * Weather.WIND_SENSITIVITY
 	position += velocity * delta
 	lifetime -= delta
 	if lifetime <= 0.0:
@@ -62,7 +68,10 @@ func _physics_process(delta: float) -> void:
 func _on_body_entered(body: Node2D) -> void:
 	if body != null and body.has_method("take_damage"):
 		var dir := velocity.normalized()
-		body.call("take_damage", spell.get("parameters", {}).get("damage", 0.0), dir)
+		# Rain dampens fire and empowers lightning at the point of hit.
+		var raw: float = spell.get("parameters", {}).get("damage", 0.0)
+		body.call("take_damage", Weather.scale_damage(raw,
+				spell.get("element", "fire")), dir)
 	# Impact recipe (AGENTS.md §13): per-element landing sound.
 	Sfx.play(Sfx.impact_sound_for(spell.get("element", "fire")))
 	_explode()

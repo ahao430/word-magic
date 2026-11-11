@@ -44,7 +44,9 @@ func _physics_process(delta: float) -> void:
 		var radius: float = maxf(spell.get("parameters", {}).get("radius", 90.0) * 0.35, 24.0)
 		position = _caster.global_position + Vector2.from_angle(_orbit) * radius \
 				+ Vector2(0, -14 + 4.0 * sin(_elapsed * 3.0))
-	var damage: float = spell.get("parameters", {}).get("damage", 0.0)
+	var damage: float = Weather.scale_damage(
+			spell.get("parameters", {}).get("damage", 0.0),
+			spell.get("element", "nature"))
 	_tick_acc += delta
 	if _tick_acc >= TICK:
 		_tick_acc = 0.0

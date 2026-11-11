@@ -12,8 +12,21 @@ const OUT_DIR := "res://assets/sprites/effects"
 func _init() -> void:
 	_save_ring()
 	_save_zone()
-	print("[effects] 2 sprites saved to " + OUT_DIR)
+	_save_dot()
+	print("[effects] 3 sprites saved to " + OUT_DIR)
 	quit()
+
+
+## 4x4 opaque white dot: tinted/scaled at runtime for rain and leaves.
+func _save_dot() -> void:
+	var img := Image.create(4, 4, false, Image.FORMAT_RGBA8)
+	for y in 4:
+		for x in 4:
+			img.set_pixel(x, y, Color(1, 1, 1, 0.9))
+	var err := img.save_png("%s/particle_dot_4.png" % OUT_DIR)
+	if err != OK:
+		push_error("[effects] dot save failed")
+		quit(1)
 
 
 func _save(name: String, img: Image) -> void:

@@ -55,7 +55,9 @@ func _ready() -> void:
 
 
 func _settle() -> void:
-	var damage: float = spell.get("parameters", {}).get("damage", 0.0)
+	var damage: float = Weather.scale_damage(
+			spell.get("parameters", {}).get("damage", 0.0),
+			spell.get("element", "fire"))
 	for body in get_overlapping_bodies():
 		if body != null and body.has_method("take_damage"):
 			var dir := (body.global_position - global_position).normalized()

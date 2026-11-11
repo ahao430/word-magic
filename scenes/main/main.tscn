@@ -183,6 +183,15 @@ text = "回到标题"
 
 [node name="SlotPanel" parent="HUD" instance=ExtResource("5_slots")]
 
+[node name="WeatherLabel" type="Label" parent="HUD"]
+offset_left = 1040.0
+offset_top = 46.0
+offset_right = 1264.0
+offset_bottom = 68.0
+modulate = Color(0.8, 0.88, 0.95, 1)
+text = ""
+horizontal_alignment = 2
+
 [node name="MicHint" type="Label" parent="HUD"]
 visible = false
 offset_left = 440.0
