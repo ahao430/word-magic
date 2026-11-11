@@ -21,3 +21,6 @@ exports/
 # AI provider credentials — copy config/ai.example.json to ai.json and
 # fill in locally; the filled file must never enter the repository.
 config/ai.json
+
+# Export outputs (export_presets build/)
+build/

@@ -13,7 +13,9 @@ config_version=5
 config/name="Word Magic"
 config/description="Language-driven fantasy RPG. Words become magic."
 run/main_scene="res://scenes/ui/title.tscn"
+config/version="0.1.0"
 config/features=PackedStringArray("4.7")
+config/icon="res://assets/sprites/ui/app_icon_256.png"
 
 [autoload]
 
@@ -101,3 +103,4 @@ reset_world={
 [rendering]
 
 textures/canvas_textures/default_texture_filter=0
+textures/vram_compression/import_etc2_astc=true

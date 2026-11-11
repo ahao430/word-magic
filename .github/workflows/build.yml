@@ -1,0 +1,143 @@
+name: build
+
+# 三件事：跑全量测试、双平台导出、发滚动构建。
+# 滚动构建固定 tag `latest` + 固定文件名 —— 每次 push 到 main 都会
+# 覆盖重建，下载下来永远是最新版；应用 bundle id 固定
+# (com.wordmagic.game)，新版解压拖入 Applications 即原地覆盖升级。
+# 打 `v*` tag 时额外发一个正式版 Release（tag 即版本号）。
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+env:
+  GODOT_VERSION: 4.7.2
+  TEMPLATES_URL: https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz
+
+permissions:
+  contents: write
+
+jobs:
+  tests:
+    name: 全量测试 (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 安装 Godot
+        run: |
+          curl -sL -o godot.zip https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          sudo install -m 755 Godot_v${GODOT_VERSION}-stable_linux.x86_64 /usr/local/bin/godot
+      - name: 导入资源
+        run: godot --headless --path . --import
+      - name: 跑测试
+        run: tools/dev/run_tests.sh
+
+  export-macos:
+    name: 导出 macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 缓存导出模板
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Application Support/Godot/export_templates
+          key: godot-templates-${{ env.GODOT_VERSION }}-macos
+      - name: 安装 Godot + 模板
+        run: |
+          if [ ! -d "$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable" ]; then
+            curl -sL --retry 5 --retry-delay 3 -o templates.tpz "$TEMPLATES_URL"
+            unzip -q templates.tpz -d unpacked
+            mkdir -p "$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
+            cp -R unpacked/templates/* "$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable/"
+          fi
+          curl -sL -o godot.zip https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_macos.universal.zip
+          unzip -q godot.zip
+          BIN="Godot.app/Contents/MacOS/Godot"
+          [ -f "$BIN" ] || BIN="Godot_v${GODOT_VERSION}-stable_macos.universal"
+          sudo install -m 755 "$BIN" /usr/local/bin/godot
+      - name: 导出 .app
+        run: |
+          godot --headless --path . --import
+          godot --headless --path . --export-release "macOS" "build/Word Magic.app"
+      - name: Ad-hoc 签名（本机直跑免右键）
+        run: codesign --force --deep --sign - "build/Word Magic.app"
+      - name: 打包固定名 zip
+        run: |
+          cd build
+          ditto -c -k --keepParent "Word Magic.app" WordMagic-macOS.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WordMagic-macOS
+          path: build/WordMagic-macOS.zip
+          if-no-files-found: error
+
+  export-windows:
+    name: 导出 Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 缓存导出模板
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Roaming\Godot\export_templates
+          key: godot-templates-${{ env.GODOT_VERSION }}-windows
+      - name: 安装 Godot + 模板
+        shell: pwsh
+        run: |
+          $tpl = "$env:APPDATA\Godot\export_templates\${env:GODOT_VERSION}.stable"
+          if (-not (Test-Path $tpl)) {
+            curl.exe -sL --retry 5 --retry-delay 3 -o templates.tpz "$env:TEMPLATES_URL"
+            tar -xf templates.tpz
+            New-Item -ItemType Directory -Force -Path $tpl | Out-Null
+            Copy-Item -Recurse -Force templates\* $tpl
+          }
+          curl.exe -sL -o godot.zip "https://github.com/godotengine/godot-builds/releases/download/${env:GODOT_VERSION}-stable/Godot_v${env:GODOT_VERSION}-stable_win64.exe.zip"
+          tar -xf godot.zip
+          New-Item -ItemType Directory -Force -Path tools-bin | Out-Null
+          Move-Item -Force "Godot_v${env:GODOT_VERSION}-stable_win64.exe" tools-bin\godot.exe
+      - name: 导出单文件 exe（内嵌 pck）
+        shell: pwsh
+        run: |
+          tools-bin\godot.exe --headless --path . --import
+          tools-bin\godot.exe --headless --path . --export-release "Windows" "build\WordMagic.exe"
+          Compress-Archive -Path build\WordMagic.exe -DestinationPath build\WordMagic-Windows-x64.zip -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WordMagic-Windows-x64
+          path: build/WordMagic-Windows-x64.zip
+          if-no-files-found: error
+
+  release:
+    name: 滚动构建发布
+    needs: [tests, export-macos, export-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: 计算发布 tag（v* 用版本号，其余滚动 latest）
+        id: tag
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: 覆盖式重建 Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          # 固定 tag + 固定文件名：先删旧再发新，链接永远有效且内容始终最新
+          gh release delete "$TAG" --yes --cleanup-tag || true
+          gh release create "$TAG" dist/WordMagic-macOS.zip dist/WordMagic-Windows-x64.zip \
+            --title "$TAG（$([ $TAG = latest ] && echo 滚动构建 || echo 正式版)）" \
+            --notes "提交 ${{ github.sha }} · ${{ github.event.head_commit.message || '手动触发' }}" \
+            ${{ steps.tag.outputs.prerelease == 'true' && '--prerelease' || '' }}

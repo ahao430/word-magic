@@ -32,6 +32,27 @@ godot --path . res://scenes/dev/gameplay_screenshot.tscn --quit-after 900
 
 提交前流程见 [docs/pre-commit-checklist.md](docs/pre-commit-checklist.md)。
 
+## 打包与分发
+
+**本地导出（macOS）**——需先安装一次导出模板（~1.1GB，`~/Library/Application
+Support/Godot/export_templates/`）：
+
+```bash
+godot --headless --path . --export-release "macOS" "build/Word Magic.app"
+codesign --force --deep --sign - "build/Word Magic.app"   # ad-hoc，本机直跑
+```
+
+**GitHub Actions**（[.github/workflows/build.yml](.github/workflows/build.yml)）：push 到
+main 自动跑全量测试 + 导出 macOS/Windows，并发布到**滚动 Release**：
+
+- 固定 tag `latest` + 固定文件名（`WordMagic-macOS.zip` / `WordMagic-Windows-x64.zip`），
+  每次 push **覆盖重建**——下载链接永远有效、内容永远最新
+- **覆盖安装**：macOS bundle id 固定 `com.wordmagic.game`，新版解压拖进
+  Applications 直接替换旧版（存档在 `~/Library/Application Support/Godot/
+  app_userdata/` 不受影响）；Windows 是内嵌 pck 的单文件 exe，改名覆盖即可
+- 打 `v*` tag 会额外发正式版 Release（tag 即版本号，标记为 latest）
+- 未签名/ad-hoc 签名：macOS 首次打开需右键→打开（无开发者证书的已知代价）
+
 ## 天气系统
 
 世界在**晴朗 / 起风 / 细雨 / 风雨交加**间流转（右上角常驻指示：天气 + 风向箭头 + 风力 + 战术提示）。
