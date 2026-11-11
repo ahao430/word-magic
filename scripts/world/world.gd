@@ -126,6 +126,16 @@ func map_pixel_size() -> Vector2:
 	return Vector2(MAP_CELLS) * Vector2(ground.tile_set.tile_size)
 
 
+## True when the ground tile at `world_pos` blocks movement (the river
+## family; the ford's stone tiles carry no collision, so a built ford
+## reads as passable). Enemies probe ahead with this to stay out of the
+## water — the weather-aware enemy AI (slime "畏水").
+func is_blocked_ground(world_pos: Vector2) -> bool:
+	var cell: Vector2i = ground.local_to_map(ground.to_local(world_pos))
+	var data := ground.get_cell_tile_data(cell)
+	return data != null and data.get_collision_polygons_count(0) > 0
+
+
 ## Cells covered by the meandering river (3 wide, widening to 5).
 static func river_cells() -> Dictionary:
 	var water := {}

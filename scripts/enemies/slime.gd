@@ -12,6 +12,9 @@ const KNOCKBACK := 180.0
 const MAX_HP := 30.0
 
 const WANDER_INTERVAL := 1.5
+## 畏水 probe distance: how far ahead the slime tests for impassable
+## ground before committing to a step (weather-aware enemy AI).
+const BLOCK_PROBE := 24.0
 
 var hp := MAX_HP
 var _wander_dir := Vector2.ZERO
@@ -42,14 +45,25 @@ func _physics_process(delta: float) -> void:
 		return
 	_player = _find_player()
 	var move := Vector2.ZERO
+	var chasing := false
 	if _player != null:
 		var dist := global_position.distance_to(_player.global_position)
 		if dist <= CHASE_RADIUS:
-			move = (_player.global_position - global_position).normalized() * CHASE_SPEED
+			chasing = true
+			# Wet weather bogs the slime down (Weather.gd cross table).
+			move = (_player.global_position - global_position).normalized() \
+					* CHASE_SPEED * Weather.enemy_speed_scale()
 		else:
 			move = _wander(delta)
 	else:
 		move = _wander(delta)
+
+	# 畏水: refuse to step toward impassable ground — chasers stare
+	# across the river, wanderers pick a new heading instead.
+	if move != Vector2.ZERO and _ground_blocked_ahead(move):
+		move = Vector2.ZERO
+		if not chasing:
+			_wander_timer = 0.0
 
 	velocity = move + _knockback
 	_knockback = _knockback.move_toward(Vector2.ZERO, 600.0 * delta)
@@ -91,6 +105,19 @@ func _die() -> void:
 	tween.tween_property(sprite, "scale:y", 0.15, 0.22)
 	tween.parallel().tween_property(sprite, "modulate:a", 0.0, 0.22)
 	tween.tween_callback(queue_free)
+
+
+## Probe BLOCK_PROBE px along the intended move for river-family
+## ground; climbs to the owning world for the tile query (slimes in a
+## bare lab simply never report blocked).
+func _ground_blocked_ahead(move: Vector2) -> bool:
+	var node := get_parent()
+	while node != null and not node.has_method("is_blocked_ground"):
+		node = node.get_parent()
+	if node == null:
+		return false
+	return bool(node.call("is_blocked_ground",
+			global_position + move.normalized() * BLOCK_PROBE))
 
 
 func _wander(delta: float) -> Vector2:

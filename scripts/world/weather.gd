@@ -26,6 +26,9 @@ const CHAIN_DECAY := 0.6
 ## Clear-sky blessing: mana regeneration multiplier under the sun.
 const MANA_BLESSING := 1.5
 
+## Wet weather bogs the slimes down (enemy side of the cross table).
+const ENEMY_WET_SLOW := 0.7
+
 static var state_name := "clear"
 static var wind := Vector2.ZERO
 
@@ -64,6 +67,11 @@ static func chain_hops() -> int:
 ## Mana regeneration multiplier: the sun feeds nature's casters.
 static func mana_regen_scale() -> float:
 	return MANA_BLESSING if state_name == "clear" else 1.0
+
+
+## Wet weather slows ground enemies (rain and storm alike).
+static func enemy_speed_scale() -> float:
+	return ENEMY_WET_SLOW if state_name in ["rain", "storm"] else 1.0
 
 
 ## HUD suffix so players can read WHY the weather matters right now.

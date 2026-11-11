@@ -144,6 +144,10 @@ func _run() -> void:
 	_expect(absf((hp0 - s1.hp) - 15.0) < 0.5,
 			"fireball hits for 15 in rain (got %.1f)" % (hp0 - s1.hp))
 
+	# The fireball's knockback sends s1 on a lap — clear it so the bolt
+	# probe measures the one-shot alone (wet-slowed slimes return too
+	# slowly to vacate the flight path within the window).
+	await _clear_enemies(world)
 	var s2: CharacterBody2D = load("res://scenes/enemies/slime.tscn").instantiate()
 	s2.position = player.global_position + Vector2(60, 0)
 	s2.hp = 30.0
@@ -234,6 +238,99 @@ func _run() -> void:
 		await physics_frame
 	_expect(absf(player.mana - 42.0) < 0.15,
 			"rain regen +2.0/s (got %.2f)" % player.mana)
+
+	# --- Enemy weather AI: wet slimes bog down to 0.7x chase ---
+	await _clear_enemies(world)
+	world.get_weather().force_state("clear")
+	Weather.wind = Vector2.ZERO
+	var wet: CharacterBody2D = load("res://scenes/enemies/slime.tscn").instantiate()
+	wet.position = player.global_position + Vector2(120, 0)
+	wet.hp = 999.0
+	world.get_entity_parent().add_child(wet)
+	await physics_frame
+	var wd0: float = wet.global_position.distance_to(player.global_position)
+	for i in 60:
+		await physics_frame
+	var closed_clear: float = wd0 - wet.global_position.distance_to(player.global_position)
+	_expect(closed_clear > 70.0 and closed_clear < 95.0,
+			"clear chase closes ~85px/s (got %.1f)" % closed_clear)
+	world.get_weather().force_state("rain")
+	wet.position = player.global_position + Vector2(120, 0)
+	await physics_frame
+	var wd1: float = wet.global_position.distance_to(player.global_position)
+	for i in 60:
+		await physics_frame
+	var closed_rain: float = wd1 - wet.global_position.distance_to(player.global_position)
+	_expect(closed_rain > 45.0 and closed_rain < 70.0,
+			"rain chase bogged to ~59.5px/s (got %.1f)" % closed_rain)
+	wet.free()
+
+	# --- 畏水: a chasing slime refuses to step into the river ---
+	world.get_weather().force_state("clear")
+	var water: Dictionary = world.river_cells()
+	var pick_y := -1
+	var wx_max := -1
+	for y in range(2, 30):
+		var row_max := -1
+		var row_count := 0
+		for cell: Vector2i in water:
+			if cell.y == y:
+				row_count += 1
+				row_max = maxi(row_max, cell.x)
+		if row_count == 3:
+			pick_y = y
+			wx_max = row_max
+			break
+	_expect(pick_y > 0, "found a 3-wide river row (y=%d)" % pick_y)
+	var bank_px := float(wx_max + 1) * 32.0
+	var y_px := pick_y * 32.0 + 16.0
+	var dread: CharacterBody2D = load("res://scenes/enemies/slime.tscn").instantiate()
+	dread.position = Vector2(bank_px + 44.0, y_px)
+	dread.hp = 999.0
+	world.get_entity_parent().add_child(dread)
+	player.global_position = Vector2(bank_px - 100.0, y_px)
+	await physics_frame
+	await physics_frame
+	_expect(absf(dread.global_position.y - y_px) < 10.0
+			and dread.global_position.distance_to(player.global_position) < 150.0,
+			"slime settled on the bank, player in chase range")
+	var x0: float = dread.global_position.x
+	for i in 90:
+		await physics_frame
+	_expect(dread.global_position.x > bank_px + 22.0,
+			"slime halts a probe short of the water (%.1f > %.1f)"
+					% [dread.global_position.x, bank_px + 22.0])
+	_expect(dread.global_position.x < x0 + 4.0,
+			"it pressed toward the bank then stopped, not fled (%.1f→%.1f)"
+					% [x0, dread.global_position.x])
+	dread.free()
+	player.global_position = Vector2(500, 300)
+
+	# --- Boss storm fury: faster chase, shorter recovery, stacks ---
+	var boss: CharacterBody2D = load("res://scenes/enemies/boss_slime.tscn").instantiate()
+	boss.position = player.global_position + Vector2(160, 0)
+	world.get_entity_parent().add_child(boss)
+	await physics_frame
+	world.get_weather().force_state("clear")
+	_expect(absf(float(boss.call("_chase_speed")) - 55.0) < 0.01
+			and absf(float(boss.call("_cooldown_time")) - 0.9) < 0.001,
+			"clear boss: 55 speed / 0.9 cooldown")
+	world.get_weather().force_state("storm")
+	_expect(absf(float(boss.call("_chase_speed")) - 68.75) < 0.01
+			and absf(float(boss.call("_cooldown_time")) - 0.63) < 0.001,
+			"storm boss: 68.75 speed / 0.63 cooldown")
+	boss.set("enraged", true)
+	_expect(absf(float(boss.call("_chase_speed")) - 106.25) < 0.01
+			and absf(float(boss.call("_cooldown_time")) - 0.35) < 0.001,
+			"storm stacks with enrage: 106.25 / 0.35")
+	boss.set("enraged", false)
+	var bd0: float = boss.global_position.distance_to(player.global_position)
+	for i in 60:
+		await physics_frame
+	var closed_boss: float = bd0 - boss.global_position.distance_to(player.global_position)
+	_expect(closed_boss > 55.0 and closed_boss < 80.0,
+			"storm boss closes at ~68.75px/s (got %.1f)" % closed_boss)
+	boss.free()
 
 	# --- Session save tier ---
 	var snap: Dictionary = world.get_weather().capture_state()

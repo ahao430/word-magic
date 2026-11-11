@@ -32,6 +32,12 @@ const ENRAGED_SLAM_DAMAGE := 16.0
 const ENRAGED_COOLDOWN_TIME := 0.5
 const ENRAGE_TIME := 0.6
 
+# Storm-fueled (weather-aware enemy AI): a storm's charge feeds the
+# king — faster pursuit, shorter recovery. Stacks multiplicatively
+# with the enrage phase, so a storm during phase 2 is the worst case.
+const STORM_SPEED_MULT := 1.25
+const STORM_COOLDOWN_MULT := 0.7
+
 # Plain var (not const) so the HUD can duck-type read hp_max.
 var hp_max := 120.0
 var hp := hp_max
@@ -82,7 +88,7 @@ func _physics_process(delta: float) -> void:
 					aggro = false
 					_enter(State.DORMANT)
 					return
-				var chase_speed := ENRAGED_CHASE_SPEED if enraged else CHASE_SPEED
+				var chase_speed := _chase_speed()
 				velocity = (_player.global_position - global_position).normalized() * chase_speed
 				if dist < CONTACT_RADIUS and _player.has_method("take_damage"):
 					_player.call("take_damage", CONTACT_DAMAGE,
@@ -138,6 +144,18 @@ func take_damage(amount: float, from_dir: Vector2) -> void:
 func _enrage() -> void:
 	enraged = true
 	_enter(State.ENRAGE)
+
+
+## Weather-aware tuning (read live each call, so a mid-fight weather
+## change re-feeds the king immediately).
+func _chase_speed() -> float:
+	var speed := ENRAGED_CHASE_SPEED if enraged else CHASE_SPEED
+	return speed * (STORM_SPEED_MULT if Weather.state_name == "storm" else 1.0)
+
+
+func _cooldown_time() -> float:
+	var t := ENRAGED_COOLDOWN_TIME if enraged else COOLDOWN_TIME
+	return t * (STORM_COOLDOWN_MULT if Weather.state_name == "storm" else 1.0)
 
 
 ## Freeze mechanic (冰封千里): pauses the skill cycle; thaw resumes it.
@@ -214,7 +232,7 @@ func _enter(next: State) -> void:
 			_visual_tween = create_tween()
 			_visual_tween.tween_property(sprite, "scale", Vector2(0.85, 1.3), SLAM_TIME)
 		State.COOLDOWN:
-			_state_timer = ENRAGED_COOLDOWN_TIME if enraged else COOLDOWN_TIME
+			_state_timer = _cooldown_time()
 			_visual_tween = create_tween()
 			_visual_tween.tween_property(sprite, "scale", Vector2.ONE, 0.25)
 		State.ENRAGE:
