@@ -18,12 +18,17 @@ static func play(resource_name: String, volume_db := -12.0) -> void:
 		_player = AudioStreamPlayer.new()
 		_player.name = "Music"
 		_player.bus = "Music"  # volume owned by the settings panel
-		root.add_child(_player)
+		# Deferred: title.gd calls play() from its own _ready, while the
+		# scene root is still setting up children — a direct add_child
+		# is rejected there and the BGM silently never starts.
+		root.add_child.call_deferred(_player)
 		# Stop playback and drop the static reference at teardown so the
 		# WAV stream/playback do not outlive the tree at exit.
 		root.tree_exiting.connect(func():
 			_player.stop()
 			_player = null)
+	if not _player.is_inside_tree():
+		await _player.ready  # resumes after the deferred add lands
 	if _player.playing and _player.stream == stream:
 		return
 	_player.stream = stream
