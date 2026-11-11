@@ -55,18 +55,19 @@ jobs:
           fi
           curl -sL -o godot.zip https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_macos.universal.zip
           unzip -q godot.zip
-          # Gatekeeper kills freshly-downloaded unsigned binaries on
-          # exec (exit 137): strip the quarantine flag first.
-          xattr -dr com.apple.quarantine Godot.app 2>/dev/null || true
-          xattr -dr com.apple.quarantine "Godot_v${GODOT_VERSION}-stable_macos.universal" 2>/dev/null || true
+          # 就地运行（不 sudo install 拷贝）；再 ad-hoc 重签——runner 曾对
+          # 下载来的二进制 exec 直接 Kill:9（137），重签后获得本地有效签名。
           BIN="Godot.app/Contents/MacOS/Godot"
           [ -f "$BIN" ] || BIN="Godot_v${GODOT_VERSION}-stable_macos.universal"
-          sudo install -m 755 "$BIN" /usr/local/bin/godot
+          xattr -dr com.apple.quarantine "$BIN" 2>/dev/null || true
+          codesign --force --sign - "$BIN"
+          chmod +x "$BIN"
+          echo "GODOT_BIN=$PWD/$BIN" >> "$GITHUB_ENV"
       - name: 导出 .app
         run: |
-          godot --headless --path . --import
+          "$GODOT_BIN" --headless --path . --import
           mkdir -p build
-          godot --headless --path . --export-release "macOS" "build/Word Magic.app"
+          "$GODOT_BIN" --headless --path . --export-release "macOS" "build/Word Magic.app"
       - name: Ad-hoc 签名（本机直跑免右键）
         run: codesign --force --deep --sign - "build/Word Magic.app"
       - name: 打包固定名 zip
@@ -106,9 +107,17 @@ jobs:
       - name: 导出单文件 exe（内嵌 pck）
         shell: pwsh
         run: |
-          tools-bin\godot.exe --headless --path . --import
+          # _win64.exe 是 GUI 子系统进程：直接调用 pwsh 不会等待，import/export
+          # 会并跑互踩。Start-Process -Wait 强制逐条等完并检查退出码。
+          function Invoke-Godot([string[]]$Args) {
+            $p = Start-Process -FilePath "tools-bin\godot.exe" -ArgumentList $Args `
+              -NoNewWindow -Wait -PassThru
+            if ($p.ExitCode -ne 0) { Write-Host "godot failed: $($Args -join ' ')"; exit $p.ExitCode }
+          }
+          Invoke-Godot @("--headless", "--path", ".", "--import")
           New-Item -ItemType Directory -Force -Path build | Out-Null
-          tools-bin\godot.exe --headless --path . --export-release "Windows" "build\WordMagic.exe"
+          Invoke-Godot @("--headless", "--path", ".", "--export-release", "Windows", "build\WordMagic.exe")
+          if (-not (Test-Path "build\WordMagic.exe")) { Write-Host "export produced no exe"; exit 1 }
           Compress-Archive -Path build\WordMagic.exe -DestinationPath build\WordMagic-Windows-x64.zip -Force
       - uses: actions/upload-artifact@v4
         with:
