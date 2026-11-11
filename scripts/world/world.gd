@@ -62,6 +62,10 @@ const GATE_N_CELL := Vector2i(WETLAND_START, 15)
 const GATE_S_CELL := Vector2i(WETLAND_START, 17)
 const ELITE_CELL := Vector2i(58, 10)
 
+## The blessing spring's preferred spot (first land cell found from
+## here, so ponds can never bury it).
+const SPRING_CELL := Vector2i(60, 22)
+
 ## Fired once when the boss dies (the boss_defeated flag + save tier
 ## record it; this notifies the HUD).
 signal boss_died
@@ -69,6 +73,9 @@ signal boss_died
 ## Fired once per save lifetime when the player first enters the
 ## wetland (permanent world memory).
 signal region_discovered(region_name: String)
+
+## Fired when the wetland elite dies (main grants the swamp heart).
+signal elite_died
 
 
 @onready var ground: TileMapLayer = $GroundLayer
@@ -125,6 +132,7 @@ func _ready() -> void:
 	_spawn_boss()
 	_setup_puzzle()
 	_spawn_gate()
+	_spawn_spring(water_cell)
 	_build_walls()
 	_setup_water_shimmer(water_cell)
 	_setup_waterfall(water_cell)
@@ -149,6 +157,14 @@ func _apply_world_memory() -> void:
 		build_ford()
 	if WorldMemory.has_event(WorldMemory.EVENT_REGION):
 		wetland_discovered = true
+	if WorldMemory.has_event(WorldMemory.EVENT_ELITE):
+		var elite := get_entity_parent().get_node_or_null("SlimeElite_%d_%d" % [ELITE_CELL.x, ELITE_CELL.y])
+		if elite != null:
+			elite.queue_free()
+	if WorldMemory.has_event(WorldMemory.EVENT_SPRING):
+		var spring := get_entity_parent().get_node_or_null("SwampSpring")
+		if spring != null:
+			spring.call("force_used")
 
 
 ## Parent to reparent entities into so they y-sort against props.
@@ -561,6 +577,29 @@ func _scatter_wetland_slimes(water_cell: Dictionary) -> void:
 	elite.set("hp", 60.0)
 	elite.scale = Vector2(1.3, 1.3)
 	elite.get_node("SlimeSprite").modulate = Color(0.55, 0.75, 0.5)
+	# The heart of the swamp: main grants the permanent upgrade on died.
+	elite.connect("died", _on_elite_died)
+
+
+func _on_elite_died() -> void:
+	WorldMemory.record_and_persist(WorldMemory.EVENT_ELITE)
+	elite_died.emit()
+
+
+## The blessing spring takes the first land cell found from SPRING_CELL
+## (ponds are deterministic, so the pick is too).
+func _spawn_spring(water_cell: Dictionary) -> void:
+	var cell := SPRING_CELL
+	while water_cell.has(cell) or cell.y == SPAWN_CELL.y:
+		cell += Vector2i(0, -1)
+	for child in props.get_children():
+		var is_blocking_prop: bool = child.name.begins_with("Tree_") or child.name.begins_with("Rock_")
+		if is_blocking_prop and Vector2i(int(child.position.x) / 32, int(child.position.y - 16) / 32) == cell:
+			child.queue_free()
+	var spring: Node2D = load("res://scripts/world/swamp_spring.gd").new()
+	spring.name = "SwampSpring"
+	spring.position = Vector2(cell) * 32.0 + Vector2(16.0, 20.0)
+	props.add_child(spring)
 
 
 ## Boundary gate: two stone pillars flanking the path row — the road

@@ -19,9 +19,14 @@ const ECHO_COST_RATIO := 0.4
 const ECHO_COOLDOWN := 0.8
 
 const SPEED := 160.0
-const MANA_MAX := 100.0
+const MANA_BASE := 100.0
 const MANA_REGEN := 2.0
-const HP_MAX := 30.0
+const HP_BASE := 30.0
+## Permanent growth (world-memory replay in main applies these): the
+## swamp heart (+hp) and the spring blessing (+mana) stack onto the
+## baseline so saves stay forward/backward compatible.
+var hp_max := HP_BASE
+var mana_max := MANA_BASE
 const INVULN_TIME := 0.8
 const KNOCKBACK := 140.0
 ## Dev-map respawn point (the stone crossing); real save/spawn handling
@@ -37,13 +42,13 @@ var _echo_cd := 0.0
 var last_spell: Dictionary = {}
 var shield_timer := 0.0
 var _shield_fx: Sprite2D = null
-var mana := MANA_MAX
-var hp := HP_MAX
+var mana := mana_max
+var hp := hp_max
 
 
 func _physics_process(_delta: float) -> void:
 	# Clear skies feed the caster: +50% regeneration in the sun (Weather).
-	mana = minf(mana + MANA_REGEN * Weather.mana_regen_scale() * _delta, MANA_MAX)
+	mana = minf(mana + MANA_REGEN * Weather.mana_regen_scale() * _delta, mana_max)
 	_basic_cd = maxf(_basic_cd - _delta, 0.0)
 	_echo_cd = maxf(_echo_cd - _delta, 0.0)
 	if shield_timer > 0.0:
@@ -95,8 +100,8 @@ func take_damage(amount: float, from_dir: Vector2) -> void:
 
 
 func _respawn() -> void:
-	hp = HP_MAX
-	mana = MANA_MAX
+	hp = hp_max
+	mana = mana_max
 	_invuln_timer = INVULN_TIME
 	global_position = RESPAWN_POSITION
 	# Teleport: snap the camera instead of gliding across the map.
@@ -114,7 +119,19 @@ func try_consume_mana(amount: float) -> bool:
 
 
 func refund_mana(amount: float) -> void:
-	mana = minf(mana + amount, MANA_MAX)
+	mana = minf(mana + amount, mana_max)
+
+
+## 沼泽之心 (elite drop): +10 max health, topped up on grant.
+func apply_swamp_heart() -> void:
+	hp_max += 10.0
+	hp = minf(hp + 10.0, hp_max)
+
+
+## 沼泽灵泉赐福 (wetland POI): +10 max mana, topped up on grant.
+func apply_spring_blessing() -> void:
+	mana_max += 10.0
+	mana = minf(mana + 10.0, mana_max)
 
 
 ## LMB/Space attack: one free arcane bolt along aim_dir. Returns false

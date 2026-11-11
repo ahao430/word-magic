@@ -115,6 +115,36 @@ func _run() -> void:
 	_expect(world.wetland_discovered and int(discover_count["n"]) == 1,
 			"re-entry never re-fires the discovery (%d)" % int(discover_count["n"]))
 
+	# --- Elite drop: the swamp heart is a permanent world fact ---
+	player.hp_max = 30.0
+	elite.call("take_damage", 999.0, Vector2.RIGHT)
+	for i in 20:
+		await physics_frame
+	_expect(not is_instance_valid(elite) and WorldMemory.has_event(WorldMemory.EVENT_ELITE),
+			"elite death records the swamp heart")
+	player.apply_swamp_heart()
+	_expect(absf(player.hp_max - 40.0) < 0.01, "swamp heart raises max hp 30->40")
+
+	# --- The blessing spring: one interact, one permanent fact ---
+	var spring: Node2D = world.get_entity_parent().get_node_or_null("SwampSpring")
+	_expect(spring != null, "the spring stands in the wetland")
+	player.mana_max = 100.0
+	var bless: Dictionary = spring.call("interact", player)
+	_expect(bool(bless["ok"]) and absf(player.mana_max - 110.0) < 0.01
+			and WorldMemory.has_event(WorldMemory.EVENT_SPRING),
+			"spring grants +10 max mana once (%s)" % bless["message"])
+	var again: Dictionary = spring.call("interact", player)
+	_expect(not bool(again["ok"]), "a dried spring refuses politely")
+	player.hp = player.hp_max
+
+	# --- Wetland idioms resolve from the local registry ---
+	var m1: Dictionary = await MagicFacade.cast("沼泽缠绕", player, world, SpellSession.new())
+	_expect(m1["ok"] and m1["source"] == "registry" and m1["cost"] == 38,
+			"沼泽缠绕 casts from the registry at 38 (%s/%d)" % [m1["source"], m1["cost"]])
+	var m2: Dictionary = await MagicFacade.cast("激流冲击", player, world, SpellSession.new())
+	_expect(m2["ok"] and m2["source"] == "registry" and m2["cost"] == 21,
+			"激流冲击 casts from the registry at 21 (%s/%d)" % [m2["source"], m2["cost"]])
+
 	# --- Discovery replays from world memory on a fresh world ---
 	var events: Dictionary = WorldMemory.capture()
 	world.free()
@@ -124,8 +154,14 @@ func _run() -> void:
 	var world2: Node2D = load("res://scenes/world/world.tscn").instantiate()
 	root.add_child(world2)
 	await physics_frame
+	await physics_frame
 	_expect(world2.wetland_discovered,
 			"world memory replays the discovery on rebuild")
+	_expect(world2.get_entity_parent().get_node_or_null("SlimeElite_58_10") == null,
+			"the elite stays dead across rebuilds")
+	var spring2: Node2D = world2.get_entity_parent().get_node_or_null("SwampSpring")
+	_expect(spring2 != null and not bool(spring2.call("interact", null)["ok"]),
+			"the blessed spring rebuilds already dry")
 	world2.free()
 
 	_teardown()

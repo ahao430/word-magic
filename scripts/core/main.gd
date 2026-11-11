@@ -53,6 +53,15 @@ func _ready() -> void:
 		_toast("史莱姆王倒下了！森林深处恢复了平静", true))
 	$World.region_discovered.connect(func(region_name: String) -> void:
 		_toast("踏入%s……这里的雨水似乎永不停歇" % region_name, true))
+	$World.elite_died.connect(func() -> void:
+		player.apply_swamp_heart()
+		_toast("拾得沼泽之心：生命上限 +10", true))
+	# Permanent growth replay (world memory owns the facts; the player
+	# node derives its stats from them each build).
+	if WorldMemory.has_event(WorldMemory.EVENT_ELITE):
+		player.apply_swamp_heart()
+	if WorldMemory.has_event(WorldMemory.EVENT_SPRING):
+		player.apply_spring_blessing()
 	GameManager.set_state(GameManager.GameState.PLAYING)
 	# One frame late: attaching the music player during _ready makes the
 	# busy root reject add_child.
@@ -68,8 +77,8 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	mana_bar.value = player.mana
 	hp_bar.value = player.hp
-	mana_label.text = "魔力 %d/100" % roundi(player.mana)
-	hp_label.text = "生命 %d/%d" % [roundi(player.hp), roundi(player.HP_MAX)]
+	mana_label.text = "魔力 %d/%d" % [roundi(player.mana), roundi(player.mana_max)]
+	hp_label.text = "生命 %d/%d" % [roundi(player.hp), roundi(player.hp_max)]
 	if Input.is_action_just_pressed("toggle_spellbook"):
 		spellbook.visible = not spellbook.visible
 	if Input.is_action_just_pressed("save_game"):
@@ -80,6 +89,8 @@ func _process(_delta: float) -> void:
 		slot_panel.open_load_mode()
 	if Input.is_action_just_pressed("reset_world"):
 		_do_world_reset()
+	if Input.is_action_just_pressed("interact"):
+		_try_interact()
 	if Input.is_action_pressed("attack"):
 		_try_basic_attack()
 	if Input.is_action_just_pressed("cast_echo"):
@@ -96,6 +107,23 @@ func _process(_delta: float) -> void:
 			Weather.wind_arrow(), "" if band == "" else "·" + band + "风",
 			Weather.tactical_hint()]
 	_update_boss_bar()
+
+
+## E 交互：范围最近的可交互物（灵泉/未来 NPC 等）。
+func _try_interact() -> void:
+	var best: Node = null
+	var best_d := 56.0
+	for child in $World.get_entity_parent().get_children():
+		if child == player or not child.has_method("interact"):
+			continue
+		var d: float = child.global_position.distance_to(player.global_position)
+		if d < best_d:
+			best_d = d
+			best = child
+	if best == null:
+		return
+	var reaction: Dictionary = best.call("interact", player)
+	_toast(str(reaction.get("message", "")), bool(reaction.get("ok", false)))
 
 
 ## --- Voice input (AGENTS.md §9): hold V, release, confirm ---

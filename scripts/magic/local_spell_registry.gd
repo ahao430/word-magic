@@ -64,6 +64,16 @@ const DRAFTS := {
 		"mechanics": ["damage"],
 		"parameters": {"damage": 8, "radius": 90, "speed": 0, "duration": 4.0},
 	},
+	"沼泽缠绕": {
+		"display": "沼泽缠绕", "element": "water", "shape": "field",
+		"mechanics": ["damage", "freeze"],
+		"parameters": {"damage": 10, "radius": 110, "speed": 0, "duration": 2.0},
+	},
+	"激流冲击": {
+		"display": "激流冲击", "element": "water", "shape": "projectile",
+		"mechanics": ["damage", "knockback"],
+		"parameters": {"damage": 14, "radius": 8, "speed": 340, "duration": 1.5},
+	},
 }
 
 

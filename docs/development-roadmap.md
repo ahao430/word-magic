@@ -43,7 +43,7 @@ player_animation · magic_pipeline · slime_sprites · combat · spell_session �
 spell_cache(35) · shapes(28) · puzzle · save · sfx · water_anim · ambient ·
 boss(31) · world_memory(24) · spellbook · flow(14) · camera(7) · settings(18) ·
 slots(18) · **ai_provider(34)** · **mouse_combat(20)** · **voice(19)** ·
-**weather(50)** · **balance(30)** · **regions(17)**
+**weather(50)** · **balance(30)** · **regions(26)**
 
 （加粗为 AI/语音/天气/平衡阶段新增；括号内为断言数。）
 测试隔离：`tests/test_isolation.gd` 统一 stash/unstash `user://` 下真实文件
@@ -75,7 +75,8 @@ slots(18) · **ai_provider(34)** · **mouse_combat(20)** · **voice(19)** ·
 | 71f8e41 | 语义缓存（§7.1 管线收口） |
 | 9c92c68 → cc3e229 | 导出打包（本地双平台 + CI 滚动 Release，四轮调试全绿） |
 | af4fd8f | 平衡轮（潜力计价 + 2.0 效率守卫 + knockback 真实现） |
-| （本轮） | 第二区域骨架：迷雾湿地（区域偏置/界门/精英/永久发现记忆） |
+| ca24b5a | 第二区域骨架：迷雾湿地（区域偏置/界门/精英/永久发现记忆） |
+| （本轮） | 湿地内容化：沼泽之心/灵泉（E 交互 + 永久成长）+ 两条湿地习语 |
 
 ## 已知限制与待办
 

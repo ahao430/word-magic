@@ -1,4 +1,7 @@
 extends CharacterBody2D
+
+signal died
+
 ## Slime enemy: wanders, chases the player when close, deals contact
 ## damage, takes projectile damage with knockback and a squish death.
 ## Dev-map layer convention: layer 4 (enemy), mask 1 (world/props).
@@ -100,6 +103,7 @@ func apply_push(force: Vector2) -> void:
 
 
 func _die() -> void:
+	died.emit()
 	set_physics_process(false)
 	var tween := create_tween()
 	tween.tween_property(sprite, "scale:y", 0.15, 0.22)
