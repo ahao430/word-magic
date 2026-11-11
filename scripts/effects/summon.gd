@@ -4,7 +4,8 @@ extends Node2D
 ## duration, then dissolves. Pure-node attack: no projectile physics.
 
 const ORB_TEXTURE := "res://assets/sprites/effects/orb_16.png"
-const TICK := 1.0
+## Tick cadence owned by SpellBalance (single source).
+var _tick_interval: float = SpellBalance.CHANNEL_TICKS["summon"]
 
 static var _scene: PackedScene
 
@@ -48,7 +49,7 @@ func _physics_process(delta: float) -> void:
 			spell.get("parameters", {}).get("damage", 0.0),
 			spell.get("element", "nature"))
 	_tick_acc += delta
-	if _tick_acc >= TICK:
+	if _tick_acc >= _tick_interval:
 		_tick_acc = 0.0
 		_zap_nearest(damage)
 	if _elapsed >= duration:

@@ -32,7 +32,7 @@ const DRAFTS := {
 	"冰封千里": {
 		"display": "冰封千里", "element": "ice", "shape": "field",
 		"mechanics": ["damage", "freeze"],
-		"parameters": {"damage": 12, "radius": 140, "speed": 0, "duration": 3.0},
+		"parameters": {"damage": 8, "radius": 140, "speed": 0, "duration": 2.5},
 	},
 	"落雷": {
 		"display": "落雷", "element": "lightning", "shape": "projectile",
@@ -47,7 +47,7 @@ const DRAFTS := {
 	"烈光贯日": {
 		"display": "烈光贯日", "element": "lightning", "shape": "beam",
 		"mechanics": ["damage"],
-		"parameters": {"damage": 25, "radius": 80, "speed": 0, "duration": 1.2},
+		"parameters": {"damage": 18, "radius": 80, "speed": 0, "duration": 1.2},
 	},
 	"大地脉动": {
 		"display": "大地脉动", "element": "nature", "shape": "area",

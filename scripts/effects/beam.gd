@@ -4,7 +4,9 @@ extends Area2D
 ## The polygon visual is tinted by element at runtime.
 
 const BEAM_WIDTH := 24.0
-const TICK := 0.25
+## Tick cadence owned by SpellBalance (single source: pricing and
+## execution share one number).
+var _tick_interval: float = SpellBalance.CHANNEL_TICKS["beam"]
 
 static var _scene: PackedScene
 
@@ -61,7 +63,7 @@ func _physics_process(delta: float) -> void:
 	var duration: float = spell.get("parameters", {}).get("duration", 0.0)
 	_elapsed += delta
 	_tick_acc += delta
-	if _tick_acc >= TICK:
+	if _tick_acc >= _tick_interval:
 		_tick_acc = 0.0
 		_tick_damage()
 	var poly: Polygon2D = $BeamPoly

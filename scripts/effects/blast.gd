@@ -58,11 +58,17 @@ func _settle() -> void:
 	var damage: float = Weather.scale_damage(
 			spell.get("parameters", {}).get("damage", 0.0),
 			spell.get("element", "fire"))
+	# Declared "knockback" mechanic: a shockwave shove with an off-feet
+	# window, so chase AI cannot instantly walk it off (the generic
+	# take_damage nudge alone loses that race).
+	var wants_push: bool = spell.get("mechanics", []).has("knockback")
 	var hit: Array = []
 	for body in get_overlapping_bodies():
 		if body != null and body.has_method("take_damage"):
 			var dir := (body.global_position - global_position).normalized()
 			body.call("take_damage", damage, dir)
+			if wants_push and body.has_method("apply_push"):
+				body.call("apply_push", dir * 180.0)
 			hit.append(body)
 	# Wet-weather lightning chains outward from the first victim; the
 	# rest of this blast's victims are excluded so it never re-bites

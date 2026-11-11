@@ -54,7 +54,7 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	var params: Dictionary = spell.get("parameters", {})
 	var duration: float = params.get("duration", 0.0)
-	var tick := 0.4 if spell.get("shape", "") == "tornado" else 0.5
+	var tick: float = SpellBalance.CHANNEL_TICKS[spell.get("shape", "field")]
 	_elapsed += delta
 	_tick_acc += delta
 	# The wind carries the zone: lead your placement upwind.
