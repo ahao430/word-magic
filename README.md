@@ -9,7 +9,7 @@
 ## 当前状态（2026-11-11）
 
 垂直切片完整可玩：**标题 → 森林探索 → 文字施法 → 战斗 → 史莱姆王 Boss → 符文解谜 →
-存读档 → 世界记忆跨重启**。31 套自动化测试全绿（655+ 断言）。详见
+存读档 → 世界记忆跨重启**。31 套自动化测试全绿（617 断言）。详见
 `docs/development-roadmap.md`。
 
 ## 快速开始
@@ -23,18 +23,14 @@ godot --headless --path . --import
 # 运行游戏（从标题页开始）
 godot --path .
 
-# 运行全部自动化测试（26 套）
-for t in player_movement transition_tiles prop_sprites prop_placement \
-         prop_collision river_collision water_tiles player_sprites player_animation \
-         magic_pipeline slime_sprites combat spell_session spell_cache shapes \
-         puzzle save sfx water_anim ambient boss world_memory spellbook \
-         flow camera settings slots; do
-  godot --headless --path . -s res://tests/${t}_test.gd
-done
+# 一键全量回归（31 套 / 617 断言，~2.5 分钟；--filter 可跑子集）
+tools/dev/run_tests.sh
 
-# 游戏内截图验证（写 /tmp/wm_*.png）
+# 游戏内截图验证（写 /tmp/wm_*.png；不要加 --headless）
 godot --path . res://scenes/dev/gameplay_screenshot.tscn --quit-after 900
 ```
+
+提交前流程见 [docs/pre-commit-checklist.md](docs/pre-commit-checklist.md)。
 
 ## 天气系统
 
