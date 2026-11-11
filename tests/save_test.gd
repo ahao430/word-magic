@@ -57,7 +57,7 @@ func _run() -> void:
 	await physics_frame
 
 	var session1 := SpellSession.new()
-	var cast1: Dictionary = MagicFacade.cast("火球术", player1, world1, session1)
+	var cast1: Dictionary = await MagicFacade.cast("火球术", player1, world1, session1)
 	_expect(cast1["ok"], "world1: 火球术 cast")
 	player1.take_damage(10.0, Vector2.RIGHT)
 	await physics_frame
@@ -137,7 +137,7 @@ func _run() -> void:
 
 	# Session tier: uniqueness and codex survive the restart.
 	_expect(session2.codex.size() == 1, "codex restored (1 entry)")
-	var recast: Dictionary = MagicFacade.cast("火球术", player2, world2, session2)
+	var recast: Dictionary = await MagicFacade.cast("火球术", player2, world2, session2)
 	_expect(not recast["ok"] and recast["reason"].begins_with("duplicate_"),
 			"used spells stay spent after reload (%s)" % recast["reason"])
 

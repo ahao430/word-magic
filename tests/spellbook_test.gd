@@ -44,8 +44,8 @@ func _run() -> void:
 			"empty hint shown before the first spell")
 
 	# --- Two casts -> two rows, hint clears ---
-	main.call("_on_cast_submitted", "火球术")
-	main.call("_on_cast_submitted", "寒冰箭")
+	await main.call("_on_cast_submitted", "火球术")
+	await main.call("_on_cast_submitted", "寒冰箭")
 	await physics_frame
 	_expect(list.get_child_count() == 2, "two codex rows after two casts")
 	_expect(not empty_hint.visible, "empty hint clears after learning")

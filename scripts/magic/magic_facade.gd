@@ -1,14 +1,22 @@
 class_name MagicFacade
 extends RefCounted
-## Orchestrates the offline casting pipeline (AGENTS.md §7.1):
-## normalize -> local registry -> validation -> balance -> duplicate
-## detection -> factory -> executor. Cache layers and AI parsing attach
-## between registry and validation in later phases; every producer
-## feeds the SAME validation path, and cache hits still pass the
-## session duplicate gate.
+## Orchestrates the casting pipeline (AGENTS.md §7.1): normalize ->
+## exact cache -> normalized cache -> local registry -> AI parser ->
+## validation -> balance -> duplicate detection -> factory -> executor.
+## Every producer feeds the SAME validation path; cache hits still pass
+## the session duplicate gate. AI infra failures return before mana is
+## charged and are never recorded (AGENTS.md §7.7).
+##
+## NOTE: cast() is a coroutine (the AI leg awaits the network) — all
+## callers must `await` it. Local-only paths complete synchronously.
 ##
 ## Returns {"ok": bool, "reason": String, "message": String,
-##          "spell": Dictionary, "cost": int}.
+##          "spell": Dictionary, "cost": int, "source": String}.
+
+# Preloads instead of global names: headless -s runs resolve new global
+# classes through .godot's cache, which lags until an editor refresh.
+const AiConfigScript := preload("res://scripts/ai/ai_config.gd")
+const SpellParserScript := preload("res://scripts/ai/spell_parser.gd")
 
 
 static func cast(raw_text: String, caster: Node, world: Node, session: SpellSession) -> Dictionary:
@@ -32,14 +40,24 @@ static func cast(raw_text: String, caster: Node, world: Node, session: SpellSess
 	if draft.is_empty():
 		draft = LocalSpellRegistry.lookup(normalized)
 		source = "registry"
-		if draft.is_empty():
-			return fail.call("unknown", "「%s」尚未被语言之力理解（AI 解析后续开放）" % raw_text.strip_edges())
+	if draft.is_empty() and AiConfigScript.is_configured():
+		# AI leg: free-form incantations the local table doesn't know.
+		# Infra failures (timeout/rate limit/unavailable/garbage) fail
+		# soft — no mana, no session record, retry stays possible.
+		var ai: Dictionary = await SpellParserScript.parse(raw_text)
+		if ai["ok"]:
+			draft = ai["draft"]
+			source = "ai"
+		else:
+			return fail.call(ai["reason"], ai["message"])
+	if draft.is_empty():
+		return fail.call("unknown", "「%s」尚未被语言之力理解（AI 未配置或未收录）" % raw_text.strip_edges())
 
 	var checked := SpellValidator.validate(draft)
 	if not checked["valid"]:
 		return fail.call("invalid", "咒语失稳：" + "；".join(checked["errors"]))
 
-	# A fresh registry hit is remembered for future adventures; cache
+	# A fresh registry/AI hit is remembered for future adventures; cache
 	# hits are re-stored harmlessly (idempotent overwrite).
 	SpellCache.store(raw_text, normalized, draft)
 

@@ -81,13 +81,13 @@ func _run() -> void:
 	await physics_frame
 
 	var session := SpellSession.new()
-	var r1: Dictionary = MagicFacade.cast("火球术", player, world, session)
+	var r1: Dictionary = await MagicFacade.cast("火球术", player, world, session)
 	_expect(r1["ok"] and r1["source"] == "registry", "first cast comes from the registry")
 	_expect(SpellCache.lookup_exact("火球术").get("display", "") == "火球术",
 			"successful registry cast is cached")
 
 	# Trust rule 1: a cache hit still hits the session duplicate gate.
-	var r2: Dictionary = MagicFacade.cast("火球术", player, world, session)
+	var r2: Dictionary = await MagicFacade.cast("火球术", player, world, session)
 	_expect(not r2["ok"] and r2["reason"].begins_with("duplicate"),
 			"cached repeat still refused by session uniqueness (%s)" % r2["reason"])
 
@@ -96,7 +96,7 @@ func _run() -> void:
 	# normalized one.
 	var mana_before: float = player.mana
 	var session2 := SpellSession.new()
-	var r3: Dictionary = MagicFacade.cast(" 火球术！", player, world, session2)
+	var r3: Dictionary = await MagicFacade.cast(" 火球术！", player, world, session2)
 	_expect(r3["ok"] and r3["source"] == "cache_normalized",
 			"variant text hits the normalized cache (source=%s)" % r3["source"])
 	var cost_paid: float = mana_before - player.mana
@@ -108,14 +108,14 @@ func _run() -> void:
 	SpellCache.store("毁天灭地", "毁天灭地", {"display": "毁天灭地", "element": "fire",
 			"shape": "projectile", "mechanics": ["damage"],
 			"parameters": {"damage": 9999, "radius": 8, "speed": 300, "duration": 2.0}})
-	var r4: Dictionary = MagicFacade.cast("毁天灭地", player, world, session3)
+	var r4: Dictionary = await MagicFacade.cast("毁天灭地", player, world, session3)
 	_expect(r4["ok"], "poisoned entry still casts (validator clamps, never rejects whole cache)")
 	_expect(float(r4["spell"]["parameters"]["damage"]) <= 60.0,
 			"clamped to the damage ceiling (got %.0f)" % float(r4["spell"]["parameters"]["damage"]))
 
 	# Unknown text is never cached.
 	SpellCache.reset()
-	var r5: Dictionary = MagicFacade.cast("阿布拉卡达布拉", player, world, session3)
+	var r5: Dictionary = await MagicFacade.cast("阿布拉卡达布拉", player, world, session3)
 	_expect(not r5["ok"] and r5["reason"] == "unknown", "unknown spell refused")
 	_expect(SpellCache.lookup_exact("阿布拉卡达布拉").is_empty()
 			and SpellCache.size() == 0, "unknown text leaves no cache trace")
@@ -124,7 +124,7 @@ func _run() -> void:
 	SpellCache.reset()
 	SpellCache.reload_from_disk()
 	var session4 := SpellSession.new()
-	var r6: Dictionary = MagicFacade.cast("火球术", player, world, session4)
+	var r6: Dictionary = await MagicFacade.cast("火球术", player, world, session4)
 	_expect(r6["ok"] and r6["source"] == "cache_exact", "after simulated restart the cache still hits")
 
 	for child in root.get_children():

@@ -58,7 +58,7 @@ func _run() -> void:
 	await physics_frame
 
 	var session := SpellSession.new()
-	var r1: Dictionary = MagicFacade.cast("  火球术！", player, world, session)
+	var r1: Dictionary = await MagicFacade.cast("  火球术！", player, world, session)
 	_expect(r1["ok"], "cast 火球术 succeeds (%s)" % r1["message"])
 	_expect(absf(player.mana - (100.0 - r1["cost"])) < 0.01, "mana charged (left %.1f)" % player.mana)
 	var projectiles := 0
@@ -72,19 +72,19 @@ func _run() -> void:
 	# (Normalized text matches the stored "火球术", so the normalized
 	# check fires before the mechanism check.)
 	var mana_after_r1: float = player.mana
-	var rdup: Dictionary = MagicFacade.cast("火球术", player, world, session)
+	var rdup: Dictionary = await MagicFacade.cast("火球术", player, world, session)
 	_expect(not rdup["ok"] and rdup["reason"] == "duplicate_normalized",
 			"recast blocked as duplicate (%s)" % rdup["reason"])
 	_expect(absf(player.mana - mana_after_r1) < 0.01, "duplicate charges no mana")
 
-	var r2: Dictionary = MagicFacade.cast("神秘乱语", player, world, session)
+	var r2: Dictionary = await MagicFacade.cast("神秘乱语", player, world, session)
 	_expect(not r2["ok"] and r2["reason"] == "unknown", "unknown phrase rejected gracefully")
 
 	# Implemented non-projectile shape: executes and records like any
 	# spell; a repeat is a mechanism duplicate, not not_unlocked.
-	var r3: Dictionary = MagicFacade.cast("风卷残云", player, world, session)
+	var r3: Dictionary = await MagicFacade.cast("风卷残云", player, world, session)
 	_expect(r3["ok"], "tornado shape executes now (%s)" % r3["message"])
-	var r3b: Dictionary = MagicFacade.cast("风卷残云", player, world, session)
+	var r3b: Dictionary = await MagicFacade.cast("风卷残云", player, world, session)
 	_expect(not r3b["ok"] and r3b["reason"].begins_with("duplicate"),
 			"implemented cast records as duplicate on retry (%s)" % r3b["reason"])
 	_expect(session.codex.size() == 2, "codex holds projectile + tornado")
@@ -95,10 +95,10 @@ func _run() -> void:
 	var dream_draft := LocalSpellRegistry.lookup("火球术").duplicate(true)
 	dream_draft["shape"] = "dream"
 	SpellCache.store("梦中咒", "梦中咒", dream_draft)
-	var r4: Dictionary = MagicFacade.cast("梦中咒", player, world, session)
+	var r4: Dictionary = await MagicFacade.cast("梦中咒", player, world, session)
 	_expect(not r4["ok"] and r4["reason"] == "invalid",
 			"whitelist-external shape rejected by the validator (%s)" % r4["reason"])
-	var r4b: Dictionary = MagicFacade.cast("梦中咒", player, world, session)
+	var r4b: Dictionary = await MagicFacade.cast("梦中咒", player, world, session)
 	_expect(not r4b["ok"] and r4b["reason"] == "invalid",
 			"refused casts are not recorded as duplicates")
 	_expect(session.codex.size() == 2, "codex unchanged by refused shape")
@@ -107,7 +107,7 @@ func _run() -> void:
 	var fresh := SpellSession.new()
 	var mana_before: float = player.mana
 	player.mana = 3.0
-	var r5: Dictionary = MagicFacade.cast("火球术", player, world, fresh)
+	var r5: Dictionary = await MagicFacade.cast("火球术", player, world, fresh)
 	_expect(not r5["ok"] and r5["reason"] == "no_mana", "low mana blocks cast")
 	player.mana = mana_before
 

@@ -41,7 +41,7 @@ func _run() -> void:
 	await physics_frame
 	Input.action_release("move_right")
 	var hp_before_blast: float = player.hp
-	var r1: Dictionary = MagicFacade.cast("烈焰焚天", player, world, SpellSession.new())
+	var r1: Dictionary = await MagicFacade.cast("烈焰焚天", player, world, SpellSession.new())
 	_expect(r1["ok"], "烈焰焚天 casts (%s)" % r1["reason"])
 	for i in 8:
 		await physics_frame
@@ -60,7 +60,7 @@ func _run() -> void:
 	world.get_entity_parent().add_child(slime2)
 	await physics_frame
 	var hp2: float = slime2.hp
-	var r2: Dictionary = MagicFacade.cast("冰封千里", player, world, session)
+	var r2: Dictionary = await MagicFacade.cast("冰封千里", player, world, session)
 	_expect(r2["ok"], "冰封千里 casts")
 	for i in 40:
 		await physics_frame
@@ -84,7 +84,7 @@ func _run() -> void:
 	await physics_frame
 	var hp3: float = slime3.hp
 	var dist_before: float = slime3.global_position.distance_to(player.global_position)
-	var r3: Dictionary = MagicFacade.cast("风卷残云", player, world, session3)
+	var r3: Dictionary = await MagicFacade.cast("风卷残云", player, world, session3)
 	_expect(r3["ok"], "风卷残云 casts")
 	for i in 90:
 		await physics_frame
@@ -106,7 +106,7 @@ func _run() -> void:
 	world.get_entity_parent().add_child(slime4)
 	await physics_frame
 	var hp4: float = slime4.hp
-	var r5: Dictionary = MagicFacade.cast("烈光贯日", player, world, session4)
+	var r5: Dictionary = await MagicFacade.cast("烈光贯日", player, world, session4)
 	_expect(r5["ok"], "烈光贯日 casts (%s)" % r5["reason"])
 	for i in 50:
 		await physics_frame
@@ -117,7 +117,7 @@ func _run() -> void:
 	world.get_entity_parent().add_child(off_ray)
 	await physics_frame
 	var off_hp: float = off_ray.hp
-	var r6: Dictionary = MagicFacade.cast("烈光贯日", player, world, session4)
+	var r6: Dictionary = await MagicFacade.cast("烈光贯日", player, world, session4)
 	_expect(not r6["ok"] and r6["reason"].begins_with("duplicate"),
 			"beam is spent for this session")
 	_expect(off_ray.hp == off_hp, "slime beside the ray is untouched")
@@ -132,7 +132,7 @@ func _run() -> void:
 	await physics_frame
 	var hp5: float = slime5.hp
 	var dist5: float = slime5.global_position.distance_to(player.global_position)
-	var r7: Dictionary = MagicFacade.cast("大地脉动", player, world, session5)
+	var r7: Dictionary = await MagicFacade.cast("大地脉动", player, world, session5)
 	_expect(r7["ok"], "大地脉动 casts")
 	for i in 20:
 		await physics_frame
@@ -150,7 +150,7 @@ func _run() -> void:
 		await physics_frame
 	player.mana = 100.0
 	var session6 := SpellSession.new()
-	var r8: Dictionary = MagicFacade.cast("守护之壁", player, world, session6)
+	var r8: Dictionary = await MagicFacade.cast("守护之壁", player, world, session6)
 	_expect(r8["ok"], "守护之壁 casts")
 	_expect(float(player.get("shield_timer")) > 0.0, "shield timer armed")
 	var hp_shield: float = player.hp
@@ -175,7 +175,7 @@ func _run() -> void:
 	world.get_entity_parent().add_child(slime6)
 	await physics_frame
 	var hp6: float = slime6.hp
-	var r9: Dictionary = MagicFacade.cast("唤灵术", player, world, session7)
+	var r9: Dictionary = await MagicFacade.cast("唤灵术", player, world, session7)
 	_expect(r9["ok"], "唤灵术 casts")
 	var spirit: Node2D = null
 	for child in world.get_entity_parent().get_children():

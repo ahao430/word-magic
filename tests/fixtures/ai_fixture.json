@@ -1,0 +1,7 @@
+{
+	"base_url": "https://fake.api.local/v1",
+	"api_key": "test-key-not-real",
+	"chat_model": "test-model",
+	"embedding_model": "test-embed",
+	"request_timeout_seconds": 5
+}

@@ -9,7 +9,7 @@
 ## 当前状态（2026-11-11）
 
 垂直切片完整可玩：**标题 → 森林探索 → 文字施法 → 战斗 → 史莱姆王 Boss → 符文解谜 →
-存读档 → 世界记忆跨重启**。27 套自动化测试全绿（560+ 断言）。详见
+存读档 → 世界记忆跨重启**。28 套自动化测试全绿（590+ 断言）。详见
 `docs/development-roadmap.md`。
 
 ## 快速开始
@@ -36,6 +36,21 @@ done
 godot --path . res://scenes/dev/gameplay_screenshot.tscn --quit-after 900
 ```
 
+## AI 配置（可选）
+
+游戏完全可离线游玩（本地 11 条咒语表）。接入任意 OpenAI 兼容接口以解锁自由施法：
+
+```bash
+cp config/ai.example.json config/ai.json   # 然后编辑 ai.json 填入：
+# base_url     如 https://api.xxx.com/v1
+# api_key      你的密钥（ai.json 已被 .gitignore 忽略，绝不入库）
+# chat_model   模型名
+```
+
+保存即生效（无需改代码）：未收录的咒语将走 AI 解析，产出仍 100% 经过本地
+白名单验证/数值钳制/平衡定价/会话唯一性——AI 只负责"听懂"，不负责"放行"。
+AI 超时/限流/不可用时软失败：不扣魔力、不占咒语次数、稍后可重试。
+
 ## 操作
 
 | 按键 | 作用 |
@@ -58,7 +73,7 @@ godot --path . res://scenes/dev/gameplay_screenshot.tscn --quit-after 900
 | `assets/source/generated/` | AI 生成原始素材（只读，`.gdignore`） |
 | `assets/manifest/` | 素材授权记录（`licenses.md`） |
 | `docs/` | 设计文档 |
-| `tests/` | 27 套 headless 测试（`-s` 直接运行） |
+| `tests/` | 28 套 headless 测试（`-s` 直接运行） |
 | `tools/dev/` | 素材生成器与一次性配置脚本 |
 
 ## 文档

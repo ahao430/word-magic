@@ -190,7 +190,7 @@ func _toast(message: String, ok: bool) -> void:
 func _on_cast_submitted(text: String) -> void:
 	cast_input.clear()
 	cast_input.release_focus()
-	var result: Dictionary = MAGIC.cast(text, player, $World, spell_session)
+	var result: Dictionary = await MAGIC.cast(text, player, $World, spell_session)
 	cast_result.text = result["message"]
 	if result["ok"]:
 		cast_result.add_theme_color_override("font_color", Color(0.7, 1.0, 0.7))

@@ -11,8 +11,8 @@
 | **Exact Cache** | ✅ | `spell_cache.gd`：原样文本 → draft，跨冒险持久 |
 | **Normalized Cache** | ✅ | 同上：规范化键 → {raw, draft}，同一咒语的标点/空格变体复用解析 |
 | Local Spell Rules | ✅ | `local_spell_registry.gd`：7 条本地咒语习语 |
-| Semantic Cache | ❌ | 等 Embedding Provider（AI 配置） |
-| AI Spell Parser | ❌ | 等 Chat Provider（AI 配置） |
+| Semantic Cache | ❌ | 等 Embedding Provider（可选配置项已预留） |
+| AI Spell Parser | ✅ | `scripts/ai/spell_parser.gd`（OpenAI 兼容；经 `chat_provider.gd`，见下） |
 | Schema/Skill Validation | ✅ | `spell_validator.gd`：白名单 + 数值钳制 |
 | Balance Calculator | ✅ | `spell_balance.gd`：游戏侧统一算价 |
 | Duplicate Detection | ✅ | `spell_session.gd`：exact → normalized → mechanism 三级 |
@@ -42,9 +42,21 @@
 - 每次成功解析即写盘（低频事件，简单可靠）。
 - 深拷贝出入：调用方修改返回 draft 不会污染缓存。
 
-## AI 接入点（Phase 5 后半，待配置）
+## AI Provider 层（已接入）
 
-Provider 就绪后：AI Parser 作为第三个 draft 生产者插入 semantic cache 与
-validation 之间，产出与 registry 相同的 draft 形状，走同一条验证路径
-（AGENTS §7.2：AI 只出结构化描述，不执行）。语义缓存（Embedding）在
-Embedding Provider 就绪后挂在 normalized cache 与 AI parser 之间。
+- **配置**：`config/ai.json`（gitignored；模板 `config/ai.example.json`）。
+  字段：base_url / api_key / chat_model / embedding_model / 超时。留空 = 离线模式，
+  本地一切照常（AGENTS §8 本地回退）。`user://ai_config.json` 为导出版备选路径。
+- **ChatProvider**（`scripts/ai/chat_provider.gd`）：唯一网络缝。OpenAI 兼容
+  `POST {base_url}/chat/completions`；HTTPRequest 异步 + 超时；失败分类
+  ai_timeout / ai_rate_limited(429) / ai_unavailable / ai_invalid_response。
+  **密钥只出现在 Authorization 头，绝不打日志、绝不进错误信息。**
+- **SpellParser**：提示词由 SpellValidator 白名单**动态生成**（单一事实来源——
+  模型永远学不到游戏会拒绝的选项）；纯文本解析容忍 ``` 围栏与前后废话；
+  产出与 registry 同构的 draft。
+- **Facade 集成**：cache/registry 全 miss 且 AI 已配置才走网络；AI draft 走
+  **同一条**验证/钳制/定价/唯一性路径（source="ai"）；成功后入缓存，
+  变体短语下次免网络。**基础设施失败软着陆**：不扣魔、不记录、可重试
+  （AGENTS §7.7）。
+- **可测性**：`ChatProvider.mock_complete` 为离线测试缝，28 套测试零网络。
+- cast() 因此是协程——所有调用点 `await`（本地路径同步完成）。

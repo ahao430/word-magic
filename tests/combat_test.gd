@@ -36,7 +36,7 @@ func _run() -> void:
 	Input.action_release("move_right")
 
 	var session := SpellSession.new()
-	var r1: Dictionary = MagicFacade.cast("火球术", player, world, session)
+	var r1: Dictionary = await MagicFacade.cast("火球术", player, world, session)
 	_expect(r1["ok"], "first 火球术 cast")
 	for i in 45:
 		await physics_frame
@@ -45,7 +45,7 @@ func _run() -> void:
 
 	# Session uniqueness: 火球术 is spent this adventure, so the killing
 	# blow must be a different spell (寒冰箭, 16 dmg >= remaining 10).
-	var r2: Dictionary = MagicFacade.cast("寒冰箭", player, world, session)
+	var r2: Dictionary = await MagicFacade.cast("寒冰箭", player, world, session)
 	_expect(r2["ok"], "寒冰箭 as the killing cast")
 	for i in 60:
 		await physics_frame
