@@ -42,7 +42,7 @@ offset_left = 16.0
 offset_top = 12.0
 offset_right = 860.0
 offset_bottom = 40.0
-text = "Word Magic — Phase 2    WASD 移动 · 输入咒语回车施法 · Tab 法术图鉴 · 每句咒语本局仅一次 · F5/F9 存读 · F8 重置世界"
+text = "Word Magic — Phase 2    WASD 移动 · 左键/空格 普攻 · 右键 法术回响 · 输入咒语回车施法 · Tab 图鉴 · F5/F9 存读 · F8 重置"
 
 [node name="Spellbook" type="PanelContainer" parent="HUD"]
 visible = false

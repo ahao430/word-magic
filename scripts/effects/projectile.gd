@@ -29,6 +29,7 @@ static var ELEMENT_TINT := {
 	"nature": Color(0.6, 1.0, 0.5),
 	"wind": Color(0.8, 0.9, 1.0),
 	"water": Color(0.45, 0.65, 1.0),
+	"arcane": Color(0.78, 0.55, 1.0),
 }
 
 

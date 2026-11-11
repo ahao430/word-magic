@@ -73,7 +73,51 @@ func _process(_delta: float) -> void:
 		slot_panel.open_load_mode()
 	if Input.is_action_just_pressed("reset_world"):
 		_do_world_reset()
+	if Input.is_action_pressed("attack"):
+		_try_basic_attack()
+	if Input.is_action_just_pressed("cast_echo"):
+		_try_echo_cast()
 	_update_boss_bar()
+
+
+## LMB/Space: free arcane bolt toward the cursor, snapping onto a
+## nearby enemy (Diablo-style target click).
+func _try_basic_attack() -> void:
+	var aim: Vector2 = player.aim_direction(player.global_position,
+			get_global_mouse_position(), _enemy_candidates())
+	player.try_basic_attack(aim)
+
+
+## RMB: echo of the last successful text spell, aimed at the cursor.
+func _try_echo_cast() -> void:
+	if player.last_spell.is_empty():
+		_toast("尚无咒语可供回响（先成功施放一道法术）", false)
+		return
+	if not player.echo_ready():
+		return
+	var cost: int = player.echo_cost()
+	if not player.try_consume_mana(float(cost)):
+		_toast("魔力不足（回响需要 %d）" % cost, false)
+		return
+	player.consume_echo_cooldown()
+	var result: Dictionary = SpellExecutor.execute(player.make_echo_spell(),
+			player, $World, get_global_mouse_position())
+	if not result.get("ok", false):
+		player.refund_mana(float(cost))
+		_toast(result.get("message", "回响失败"), false)
+		return
+	GameManager.log_info("echo of %s (cost %d)" % [player.last_spell.get("display", "?"), cost])
+
+
+## Enemies near the cursor for aim snapping (cheap sibling scan).
+func _enemy_candidates() -> Array:
+	var out := []
+	for child in $World.get_entity_parent().get_children():
+		if child is CharacterBody2D \
+				and (child.name.begins_with("Slime") or child.name.begins_with("BossSlime")) \
+				and child.get("alive") != false and not child.is_queued_for_deletion():
+			out.append({"pos": child.global_position, "name": child.name})
+	return out
 
 
 ## Slot-panel callback: write or restore the chosen slot.
@@ -195,6 +239,7 @@ func _on_cast_submitted(text: String) -> void:
 	if result["ok"]:
 		cast_result.add_theme_color_override("font_color", Color(0.7, 1.0, 0.7))
 		GameManager.log_info("cast '%s' ok, cost %d" % [text, result["cost"]])
+		player.last_spell = result["spell"]
 		_add_codex_row(result["spell"])
 		# Puzzle reactions (rule-based, game-side validation).
 		var puzzle_msg: String = $World.on_spell_cast(result["spell"], player.global_position)

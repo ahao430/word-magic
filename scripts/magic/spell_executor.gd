@@ -17,18 +17,24 @@ const BeamScript := preload("res://scripts/effects/beam.gd")
 const SummonScript := preload("res://scripts/effects/summon.gd")
 
 
-static func execute(spell: Dictionary, caster: Node2D, world: Node2D) -> Dictionary:
+## aim_point: optional world-space target (mouse casting, Diablo
+## style). Vector2.INF keeps the classic facing-direction behavior.
+const AIM_RANGE := 220.0
+
+
+static func execute(spell: Dictionary, caster: Node2D, world: Node2D,
+		aim_point := Vector2.INF) -> Dictionary:
 	match spell["shape"]:
 		"projectile":
-			return _execute_projectile(spell, caster, world)
+			return _execute_projectile(spell, caster, world, aim_point)
 		"explosion":
-			return _execute_explosion(spell, caster, world)
+			return _execute_explosion(spell, caster, world, aim_point)
 		"field", "tornado":
-			return _execute_zone(spell, caster, world)
+			return _execute_zone(spell, caster, world, aim_point)
 		"area":
-			return _execute_area(spell, caster, world)
+			return _execute_area(spell, caster, world, aim_point)
 		"beam":
-			return _execute_beam(spell, caster, world)
+			return _execute_beam(spell, caster, world, aim_point)
 		"shield":
 			return _execute_shield(spell, caster)
 		"summon":
@@ -38,10 +44,9 @@ static func execute(spell: Dictionary, caster: Node2D, world: Node2D) -> Diction
 					"message": "「%s」的形态尚未觉醒" % spell.get("display", spell["shape"])}
 
 
-static func _execute_projectile(spell: Dictionary, caster: Node2D, world: Node2D) -> Dictionary:
-	var direction := Vector2.RIGHT
-	if caster.has_method("get_facing_vector"):
-		direction = caster.call("get_facing_vector")
+static func _execute_projectile(spell: Dictionary, caster: Node2D, world: Node2D,
+		aim_point := Vector2.INF) -> Dictionary:
+	var direction := _aim_direction(caster, aim_point)
 	var parent := _spawn_parent(world)
 	var proj := ProjectileScript.spawn(spell, caster.global_position + direction * 20.0, direction, parent)
 	if proj == null:
@@ -49,35 +54,45 @@ static func _execute_projectile(spell: Dictionary, caster: Node2D, world: Node2D
 	return {"ok": true, "message": "「%s」离手而去" % spell.get("display", "?")}
 
 
-static func _execute_explosion(spell: Dictionary, caster: Node2D, world: Node2D) -> Dictionary:
-	var direction := Vector2.RIGHT
-	if caster.has_method("get_facing_vector"):
-		direction = caster.call("get_facing_vector")
+static func _execute_explosion(spell: Dictionary, caster: Node2D, world: Node2D,
+		aim_point := Vector2.INF) -> Dictionary:
 	var parent := _spawn_parent(world)
-	var landing: Vector2 = caster.global_position + direction * 96.0
+	var landing: Vector2
+	if aim_point.is_finite():
+		landing = _clamped_aim(caster, aim_point)
+	else:
+		var direction := _aim_direction(caster, Vector2.INF)
+		landing = caster.global_position + direction * 96.0
 	BlastScript.spawn(spell, landing, parent)
 	return {"ok": true, "message": "「%s」轰然炸裂" % spell.get("display", "?")}
 
 
-static func _execute_zone(spell: Dictionary, caster: Node2D, world: Node2D) -> Dictionary:
+static func _execute_zone(spell: Dictionary, caster: Node2D, world: Node2D,
+		aim_point := Vector2.INF) -> Dictionary:
 	var parent := _spawn_parent(world)
-	ZoneScript.spawn(spell, caster.global_position, parent)
+	var center := caster.global_position
+	if aim_point.is_finite():
+		center = _clamped_aim(caster, aim_point)
+	ZoneScript.spawn(spell, center, parent)
 	var message := "「%s」寒霜漫开" if spell.get("shape", "") == "field" else "「%s」狂风大作"
 	return {"ok": true, "message": message % spell.get("display", "?")}
 
 
 ## Area burst centered on the caster (大地脉动): reuse the blast node.
-static func _execute_area(spell: Dictionary, caster: Node2D, world: Node2D) -> Dictionary:
+static func _execute_area(spell: Dictionary, caster: Node2D, world: Node2D,
+		aim_point := Vector2.INF) -> Dictionary:
 	var parent := _spawn_parent(world)
-	BlastScript.spawn(spell, caster.global_position, parent)
+	var center := caster.global_position
+	if aim_point.is_finite():
+		center = _clamped_aim(caster, aim_point)
+	BlastScript.spawn(spell, center, parent)
 	return {"ok": true, "message": "「%s」大地轰鸣" % spell.get("display", "?")}
 
 
 ## Directed ray held for the duration (烈光贯日).
-static func _execute_beam(spell: Dictionary, caster: Node2D, world: Node2D) -> Dictionary:
-	var direction := Vector2.RIGHT
-	if caster.has_method("get_facing_vector"):
-		direction = caster.call("get_facing_vector")
+static func _execute_beam(spell: Dictionary, caster: Node2D, world: Node2D,
+		aim_point := Vector2.INF) -> Dictionary:
+	var direction := _aim_direction(caster, aim_point)
 	var parent := _spawn_parent(world)
 	BeamScript.spawn(spell, caster.global_position, direction, parent)
 	return {"ok": true, "message": "「%s」光柱贯空" % spell.get("display", "?")}
@@ -104,3 +119,23 @@ static func _spawn_parent(world: Node2D) -> Node2D:
 	if world.has_method("get_entity_parent"):
 		return world.call("get_entity_parent")
 	return world
+
+
+## Facing fallback when no aim point was supplied.
+static func _aim_direction(caster: Node2D, aim_point: Vector2) -> Vector2:
+	if aim_point.is_finite():
+		var d := aim_point - caster.global_position
+		if d.length() > 1.0:
+			return d.normalized()
+	if caster.has_method("get_facing_vector"):
+		return caster.call("get_facing_vector")
+	return Vector2.RIGHT
+
+
+## Aim is honored up to AIM_RANGE px out; beyond that it clamps onto
+## the ring so mouse casts never reach across the whole map.
+static func _clamped_aim(caster: Node2D, aim_point: Vector2) -> Vector2:
+	var offset := aim_point - caster.global_position
+	if offset.length() <= AIM_RANGE:
+		return aim_point
+	return caster.global_position + offset.normalized() * AIM_RANGE
