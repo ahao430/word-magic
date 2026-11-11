@@ -182,3 +182,53 @@ theme_override_font_sizes/font_size = 18
 text = "回到标题"
 
 [node name="SlotPanel" parent="HUD" instance=ExtResource("5_slots")]
+
+[node name="MicHint" type="Label" parent="HUD"]
+visible = false
+offset_left = 440.0
+offset_top = 636.0
+offset_right = 840.0
+offset_bottom = 662.0
+modulate = Color(1, 0.55, 0.55, 1)
+text = "● 录音中…松开发送（Esc 取消）"
+horizontal_alignment = 1
+
+[node name="VoiceConfirm" type="PanelContainer" parent="HUD"]
+visible = false
+process_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -210.0
+offset_top = -84.0
+offset_right = 210.0
+offset_bottom = 84.0
+
+[node name="Margin" type="MarginContainer" parent="HUD/VoiceConfirm"]
+
+[node name="Rows" type="VBoxContainer" parent="HUD/VoiceConfirm/Margin"]
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="HUD/VoiceConfirm/Margin/Rows"]
+text = "听到的是——"
+horizontal_alignment = 1
+
+[node name="Transcript" type="Label" parent="HUD/VoiceConfirm/Margin/Rows"]
+theme_override_font_sizes/font_size = 22
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Buttons" type="HBoxContainer" parent="HUD/VoiceConfirm/Margin/Rows"]
+alignment = 1
+theme_override_constants/separation = 24
+
+[node name="ConfirmButton" type="Button" parent="HUD/VoiceConfirm/Margin/Rows/Buttons"]
+theme_override_font_sizes/font_size = 18
+text = "施法（Enter）"
+
+[node name="CancelButton" type="Button" parent="HUD/VoiceConfirm/Margin/Rows/Buttons"]
+theme_override_font_sizes/font_size = 18
+text = "取消（Esc）"

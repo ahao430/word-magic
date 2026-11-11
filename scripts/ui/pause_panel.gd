@@ -12,6 +12,17 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	# Voice owns Esc while recording or confirming (AGENTS.md §9:
+	# cancel is always one keystroke away). VoiceInput lives on Main,
+	# two levels up from this HUD child.
+	var main := get_parent().get_parent()
+	var voice := main.get_node_or_null("VoiceInput")
+	var vc := main.get_node_or_null("HUD/VoiceConfirm")
+	if voice != null and (str(voice.call("state_name")) in ["RECORDING", "CONFIRM"]
+			or (vc != null and vc.visible)):
+		if Input.is_action_just_pressed("pause"):
+			voice.call("cancel")
+		return
 	if Input.is_action_just_pressed("pause"):
 		if visible:
 			_resume()

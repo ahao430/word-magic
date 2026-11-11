@@ -111,3 +111,28 @@ static func timeout_seconds() -> float:
 ## Full chat-completions endpoint for the configured base URL.
 static func chat_url() -> String:
 	return "%s/chat/completions" % base_url()
+
+
+## --- Voice input (AGENTS.md §9) ---
+
+static func asr_base_url() -> String:
+	_ensure_loaded()
+	var v := str(_cached.get("asr_base_url", "")).strip_edges().rstrip("/")
+	return v if v != "" else base_url()
+
+
+static func asr_model() -> String:
+	_ensure_loaded()
+	return str(_cached.get("asr_model", "")).strip_edges()
+
+
+## The optional spoken prefix that marks a real cast ("施法" etc.).
+static func cast_phrase() -> String:
+	_ensure_loaded()
+	return str(_cached.get("cast_phrase", "")).strip_edges()
+
+
+## Voice is live only when an ASR model was filled in.
+static func is_voice_available() -> bool:
+	_ensure_loaded()
+	return asr_model() != "" and asr_base_url() != ""

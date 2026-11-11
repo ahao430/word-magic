@@ -19,6 +19,9 @@ const MAGIC := preload("res://scripts/magic/magic_facade.gd")
 @onready var boss_bar: ProgressBar = $HUD/BossBar
 @onready var boss_label: Label = $HUD/BossLabel
 @onready var slot_panel: Control = $HUD/SlotPanel
+@onready var mic_hint: Label = $HUD/MicHint
+@onready var voice_confirm: PanelContainer = $HUD/VoiceConfirm
+@onready var voice_transcript: Label = $HUD/VoiceConfirm/Margin/Rows/Transcript
 
 ## One spell session per adventure (uniqueness + codex).
 var spell_session := SpellSession.new()
@@ -34,6 +37,7 @@ func _ready() -> void:
 	# player interleaves correctly with tree canopies while walking.
 	player.reparent($World.get_entity_parent(), true)
 	slot_panel.slot_chosen.connect(_on_slot_chosen)
+	_setup_voice()
 	# Camera clamps to the map rectangle so edges never show void.
 	var cam: Camera2D = player.get_node_or_null("Camera2D")
 	if cam != null:
@@ -77,7 +81,50 @@ func _process(_delta: float) -> void:
 		_try_basic_attack()
 	if Input.is_action_just_pressed("cast_echo"):
 		_try_echo_cast()
+	if Input.is_action_just_pressed("voice_talk"):
+		voice.talk_pressed()
+	if Input.is_action_just_released("voice_talk"):
+		voice.talk_released()
+	if voice.is_recording_held() and not Input.is_action_pressed("voice_talk"):
+		voice.talk_released()
 	_update_boss_bar()
+
+
+## --- Voice input (AGENTS.md §9): hold V, release, confirm ---
+
+var voice: Node
+
+
+func _setup_voice() -> void:
+	voice = preload("res://scripts/voice/voice_input.gd").new()
+	voice.name = "VoiceInput"
+	add_child(voice)
+	voice.state_changed.connect(_on_voice_state)
+	voice.text_confirmed.connect(_on_voice_confirmed)
+	voice.failed.connect(func(reason: String, message: String) -> void:
+		_toast(message, false))
+	$HUD/VoiceConfirm/Margin/Rows/Buttons/ConfirmButton.pressed.connect(
+			func() -> void: voice.confirm())
+	$HUD/VoiceConfirm/Margin/Rows/Buttons/CancelButton.pressed.connect(
+			func() -> void: voice.cancel())
+	$HUD/VoiceConfirm/Margin/Rows/Buttons/ConfirmButton.process_mode = 			Node.PROCESS_MODE_ALWAYS
+	$HUD/VoiceConfirm/Margin/Rows/Buttons/CancelButton.process_mode = 			Node.PROCESS_MODE_ALWAYS
+
+
+func _on_voice_state(state_name: String) -> void:
+	mic_hint.visible = state_name == "RECORDING"
+	if state_name == "CONFIRM":
+		voice_transcript.text = "「%s」" % voice.transcript
+		voice_confirm.visible = true
+		$HUD/VoiceConfirm/Margin/Rows/Buttons/ConfirmButton.grab_focus()
+	else:
+		voice_confirm.visible = false
+
+
+## Confirmed transcript behaves exactly like typed text — same
+## pipeline, same costs. Cancel/infra failures never reach here.
+func _on_voice_confirmed(text: String) -> void:
+	_on_cast_submitted(text)
 
 
 ## LMB/Space: free arcane bolt toward the cursor, snapping onto a
