@@ -89,8 +89,9 @@ func _process(_delta: float) -> void:
 	if voice.is_recording_held() and not Input.is_action_pressed("voice_talk"):
 		voice.talk_released()
 	var band := Weather.wind_band()
-	weather_label.text = "天气：%s%s %s" % [Weather.describe(),
-			Weather.wind_arrow(), "" if band == "" else "·" + band + "风"]
+	weather_label.text = "天气：%s%s %s%s" % [Weather.describe(),
+			Weather.wind_arrow(), "" if band == "" else "·" + band + "风",
+			Weather.tactical_hint()]
 	_update_boss_bar()
 
 

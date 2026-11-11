@@ -42,7 +42,8 @@ var hp := HP_MAX
 
 
 func _physics_process(_delta: float) -> void:
-	mana = minf(mana + MANA_REGEN * _delta, MANA_MAX)
+	# Clear skies feed the caster: +50% regeneration in the sun (Weather).
+	mana = minf(mana + MANA_REGEN * Weather.mana_regen_scale() * _delta, MANA_MAX)
 	_basic_cd = maxf(_basic_cd - _delta, 0.0)
 	_echo_cd = maxf(_echo_cd - _delta, 0.0)
 	if shield_timer > 0.0:

@@ -17,6 +17,15 @@ const DAMAGE_MODS := {
 ## Ballistic wind sensitivity for projectiles (velocity offset factor).
 const WIND_SENSITIVITY := 0.35
 
+## Chain lightning: lightning hops per wet state, hop search radius and
+## damage decay per hop (rain arcs once, a storm twice).
+const CHAIN_HOPS := {"rain": 1, "storm": 2}
+const CHAIN_RADIUS := 110.0
+const CHAIN_DECAY := 0.6
+
+## Clear-sky blessing: mana regeneration multiplier under the sun.
+const MANA_BLESSING := 1.5
+
 static var state_name := "clear"
 static var wind := Vector2.ZERO
 
@@ -45,6 +54,25 @@ static func wind_band() -> String:
 static func damage_scale(element: String) -> float:
 	var mods: Dictionary = DAMAGE_MODS.get(state_name, {})
 	return float(mods.get(element, 1.0))
+
+
+## How many chain hops a lightning hit earns in this weather (0 = dry).
+static func chain_hops() -> int:
+	return int(CHAIN_HOPS.get(state_name, 0))
+
+
+## Mana regeneration multiplier: the sun feeds nature's casters.
+static func mana_regen_scale() -> float:
+	return MANA_BLESSING if state_name == "clear" else 1.0
+
+
+## HUD suffix so players can read WHY the weather matters right now.
+static func tactical_hint() -> String:
+	if chain_hops() > 0:
+		return "·链电"
+	if state_name == "clear":
+		return "·回蓝"
+	return ""
 
 
 static func scale_damage(damage: float, element: String) -> float:

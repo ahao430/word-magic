@@ -70,8 +70,10 @@ func _on_body_entered(body: Node2D) -> void:
 		var dir := velocity.normalized()
 		# Rain dampens fire and empowers lightning at the point of hit.
 		var raw: float = spell.get("parameters", {}).get("damage", 0.0)
-		body.call("take_damage", Weather.scale_damage(raw,
-				spell.get("element", "fire")), dir)
+		var dealt: float = Weather.scale_damage(raw, spell.get("element", "fire"))
+		body.call("take_damage", dealt, dir)
+		# Wet weather arcs lightning to nearby enemies (Weather.gd).
+		ChainArc.on_hit(spell, body, dealt)
 	# Impact recipe (AGENTS.md §13): per-element landing sound.
 	Sfx.play(Sfx.impact_sound_for(spell.get("element", "fire")))
 	_explode()

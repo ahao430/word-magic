@@ -78,6 +78,8 @@ func _zap_nearest(damage: float) -> void:
 	if nearest != null:
 		var dir := (nearest.global_position - global_position).normalized()
 		nearest.call("take_damage", damage, dir)
+		# Wet weather arcs the zap to neighbours (Weather.gd).
+		ChainArc.on_hit(spell, nearest, damage)
 		# A brief flash on the spirit as the zap lands.
 		var tw := create_tween()
 		tw.tween_property(orb, "modulate", Color(1.8, 1.8, 1.8), 0.08)

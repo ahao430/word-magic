@@ -75,9 +75,15 @@ func _tick_damage() -> void:
 	var damage: float = Weather.scale_damage(
 			spell.get("parameters", {}).get("damage", 0.0),
 			spell.get("element", "lightning"))
+	var hit: Array = []
 	for body in get_overlapping_bodies():
 		if body != null and body.has_method("take_damage"):
 			body.call("take_damage", damage, _dir)
+			hit.append(body)
+	# Wet-weather lightning chains outward from the first victim (the
+	# beam's own victims excluded — same rule as the blast).
+	if not hit.is_empty():
+		ChainArc.on_hit(spell, hit[0], damage, hit.slice(1))
 
 
 func _beam_color() -> Color:

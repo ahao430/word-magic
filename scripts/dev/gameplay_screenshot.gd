@@ -57,7 +57,7 @@ func _ready() -> void:
 	await RenderingServer.frame_post_draw
 	Input.action_release("move_right")
 
-	var result: Dictionary = MAGIC.cast("火球术", player, main.get_node("World"), SpellSession.new())
+	var result: Dictionary = await MAGIC.cast("火球术", player, main.get_node("World"), SpellSession.new())
 	print("[shot] cast: ", result["message"], " cost ", result["cost"])
 	for i in 18:
 		await RenderingServer.frame_post_draw  # ~impact at 150px / 300px/s
@@ -77,7 +77,7 @@ func _ready() -> void:
 	var world: Node2D = main.get_node("World")
 	player.position = Vector2(13 * 32 + 16, 12 * 32 + 40)
 	await RenderingServer.frame_post_draw
-	var puzzle_result: Dictionary = MAGIC.cast("寒冰箭", player, world, SpellSession.new())
+	var puzzle_result: Dictionary = await MAGIC.cast("寒冰箭", player, world, SpellSession.new())
 	if puzzle_result["ok"]:
 		# Mirror main.gd: forward the cast to puzzle nodes.
 		print("[shot] puzzle: ", world.on_spell_cast(puzzle_result["spell"], player.global_position))

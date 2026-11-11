@@ -8,6 +8,9 @@ const ZONE_TEXTURE := "res://assets/sprites/effects/field_zone_128.png"
 const FROST_COLOR := Color(0.65, 0.85, 1.2)
 const GALE_COLOR := Color(0.85, 0.95, 1.1)
 const FREEZE_PER_TICK := 0.6  # seconds of freeze applied per tick
+## Wind drift factor per shape: tornadoes ride the gale, frost fields
+## only creep — placing them upwind becomes part of the craft.
+const DRIFT_FACTOR := {"field": 0.10, "tornado": 0.22}
 
 static var _scene: PackedScene
 
@@ -54,6 +57,9 @@ func _physics_process(delta: float) -> void:
 	var tick := 0.4 if spell.get("shape", "") == "tornado" else 0.5
 	_elapsed += delta
 	_tick_acc += delta
+	# The wind carries the zone: lead your placement upwind.
+	position += Weather.wind_vector() * float(DRIFT_FACTOR.get(
+			spell.get("shape", "field"), 0.1)) * delta
 	if _tick_acc >= tick:
 		_tick_acc = 0.0
 		_tick_damage()
@@ -71,16 +77,22 @@ func _tick_damage() -> void:
 			spell.get("parameters", {}).get("damage", 0.0),
 			spell.get("element", "ice"))
 	var mechanics: Array = spell.get("mechanics", [])
+	var hit: Array = []
 	for body in get_overlapping_bodies():
 		if body == null or not body.has_method("take_damage"):
 			continue
 		var dir := (body.global_position - global_position).normalized()
 		body.call("take_damage", damage, dir)
+		hit.append(body)
 		if mechanics.has("freeze") and body.has_method("apply_freeze"):
 			body.call("apply_freeze", FREEZE_PER_TICK)
 		if spell.get("shape", "") == "tornado" and body.has_method("apply_push"):
 			# Strong enough to overcome chase AI for the gale fantasy.
 			body.call("apply_push", dir * 420.0)
+	# Wet-weather lightning chains outward from the first victim (the
+	# tick's own victims are excluded — same rule as the blast).
+	if not hit.is_empty():
+		ChainArc.on_hit(spell, hit[0], damage, hit.slice(1))
 
 
 func _zone_color() -> Color:

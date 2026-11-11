@@ -49,6 +49,21 @@ func _run() -> void:
 	Weather.wind = Vector2(120, 0)
 	_expect(Weather.wind_band() == "中", "wind band 中 at 120")
 
+	# --- Cross-effect statics: chain hops, mana blessing, HUD hint ---
+	Weather.state_name = "clear"
+	_expect(Weather.chain_hops() == 0 and absf(Weather.mana_regen_scale() - 1.5) < 0.001,
+			"clear: no chain, 1.5x mana regen")
+	_expect(Weather.tactical_hint() == "·回蓝", "clear hint is 回蓝")
+	Weather.state_name = "windy"
+	_expect(Weather.chain_hops() == 0 and Weather.tactical_hint() == "",
+			"windy: no chain, no hint")
+	Weather.state_name = "rain"
+	_expect(Weather.chain_hops() == 1 and Weather.tactical_hint() == "·链电",
+			"rain: 1 chain hop, hint 链电")
+	Weather.state_name = "storm"
+	_expect(Weather.chain_hops() == 2 and absf(Weather.mana_regen_scale() - 1.0) < 0.001,
+			"storm: 2 chain hops, regen untouched")
+
 	# --- System node: states, particles, wind picking ---
 	var system: Node = load("res://scripts/world/weather_system.gd").new()
 	root.add_child(system)
@@ -143,6 +158,83 @@ func _run() -> void:
 	_expect(not is_instance_valid(s2),
 			"lightning one-shots a 30hp slime in rain (37.5 dmg)")
 
+	# --- Chain lightning: a rain bolt arcs to the next slime over ---
+	await _clear_enemies(world)
+	world.get_weather().force_state("rain")
+	Weather.wind = Vector2.ZERO
+	var c1: CharacterBody2D = load("res://scenes/enemies/slime.tscn").instantiate()
+	c1.position = player.global_position + Vector2(60, 0)
+	c1.hp = 200.0
+	world.get_entity_parent().add_child(c1)
+	var c2: CharacterBody2D = load("res://scenes/enemies/slime.tscn").instantiate()
+	c2.position = player.global_position + Vector2(150, 0)
+	c2.hp = 200.0
+	world.get_entity_parent().add_child(c2)
+	await physics_frame
+	c1.apply_freeze(4.0)
+	c2.apply_freeze(4.0)
+	var h1: float = c1.hp
+	var h2: float = c2.hp
+	var r3: Dictionary = await MagicFacade.cast("落雷", player, world, SpellSession.new())
+	_expect(r3["ok"], "chain probe lightning casts")
+	for i in 60:
+		await physics_frame
+	_expect(absf((h1 - c1.hp) - 37.5) < 0.5 and absf((h2 - c2.hp) - 22.5) < 0.5,
+			"rain bolt 37.5 chains for 22.5 (got %.1f/%.1f)" % [h1 - c1.hp, h2 - c2.hp])
+
+	# --- ChainArc semantics in a bare lab (storm: 2 decaying hops) ---
+	var arc_lab: Node2D = Node2D.new()
+	root.add_child(arc_lab)
+	var arc_spell := {"element": "lightning", "shape": "projectile",
+			"parameters": {"damage": 30.0}}
+	var a1 := _frozen_slime(arc_lab, Vector2(0, 0))
+	var a2 := _frozen_slime(arc_lab, Vector2(100, 0))
+	var a3 := _frozen_slime(arc_lab, Vector2(200, 0))
+	Weather.state_name = "storm"
+	var chained: Array = ChainArc.on_hit(arc_spell, a1, 37.5)
+	_expect(chained.size() == 2 and chained[0] == a2 and chained[1] == a3,
+			"storm arcs two decaying hops")
+	_expect(absf((200.0 - a2.hp) - 22.5) < 0.01 and absf((200.0 - a3.hp) - 13.5) < 0.01,
+			"hop damage decays 0.6/0.36 (got %.1f/%.1f)" % [200.0 - a2.hp, 200.0 - a3.hp])
+	# Dry weather: no arc at all.
+	Weather.state_name = "clear"
+	a2.hp = 200.0
+	a3.hp = 200.0
+	_expect(ChainArc.on_hit(arc_spell, a1, 37.5).is_empty()
+			and a2.hp == 200.0 and a3.hp == 200.0,
+			"clear weather never chains")
+	# Non-lightning never chains even in a storm.
+	Weather.state_name = "storm"
+	var fire_spell := {"element": "fire", "shape": "projectile",
+			"parameters": {"damage": 30.0}}
+	_expect(ChainArc.on_hit(fire_spell, a1, 30.0).is_empty(),
+			"fire never chains")
+	# Blast-style exclude list: the nearest neighbour is skipped, so the
+	# arc lands on the next one in range.
+	a2.hp = 200.0
+	a3.hp = 200.0
+	var a4 := _frozen_slime(arc_lab, Vector2(80, 0))
+	var excl: Array = ChainArc.on_hit(arc_spell, a1, 37.5, [a2])
+	_expect(excl.size() == 1 and excl[0] == a4 and a2.hp == 200.0
+			and absf((200.0 - a4.hp) - 22.5) < 0.01,
+			"excluded neighbours are skipped by the arc")
+	arc_lab.free()
+	Weather.state_name = "rain"
+
+	# --- Clear-sky blessing: mana regen 1.5x sun vs 1.0x rain ---
+	world.get_weather().force_state("clear")
+	player.mana = 40.0
+	for i in 60:
+		await physics_frame
+	_expect(absf(player.mana - 43.0) < 0.15,
+			"clear regen +3.0/s (got %.2f)" % player.mana)
+	world.get_weather().force_state("rain")
+	player.mana = 40.0
+	for i in 60:
+		await physics_frame
+	_expect(absf(player.mana - 42.0) < 0.15,
+			"rain regen +2.0/s (got %.2f)" % player.mana)
+
 	# --- Session save tier ---
 	var snap: Dictionary = world.get_weather().capture_state()
 	_expect(snap.has("state") and snap.has("wind_x"),
@@ -152,7 +244,59 @@ func _run() -> void:
 	_expect(Weather.state_name == str(snap["state"]),
 			"apply_state restores the weather")
 
+	# --- Wind drift: zones ride the gale (tornado harder than field) ---
+	# Free the system first: its eased lerp would fight the crisp manual
+	# wind value below (same trick as the ballistics section).
+	var wsys: Node = world.get_weather()
+	if is_instance_valid(wsys):
+		wsys.free()
+	Weather.wind = Vector2(200, 0)
+	Weather.state_name = "windy"
+	var drift_lab := Node2D.new()
+	root.add_child(drift_lab)
+	var zone_script := load("res://scripts/effects/field_zone.gd")
+	var field: Area2D = zone_script.spawn({"element": "ice", "shape": "field",
+			"parameters": {"damage": 1.0, "radius": 60.0, "duration": 8.0}},
+			Vector2(0, 0), drift_lab)
+	var gale: Area2D = zone_script.spawn({"element": "wind", "shape": "tornado",
+			"parameters": {"damage": 1.0, "radius": 60.0, "duration": 8.0}},
+			Vector2(0, 200), drift_lab)
+	await physics_frame
+	var f0: Vector2 = field.position
+	var g0: Vector2 = gale.position
+	for i in 90:
+		await physics_frame
+	# 90 physics frames = 1.5s: field 200*0.10*1.5=30px, tornado 66px.
+	_expect(absf(field.position.x - f0.x - 30.0) < 6.0,
+			"field creeps with the wind (%.1f px)" % (field.position.x - f0.x))
+	_expect(absf(gale.position.x - g0.x - 66.0) < 8.0,
+			"tornado rides the gale harder (%.1f px)" % (gale.position.x - g0.x))
+	Weather.wind = Vector2.ZERO
+	Weather.state_name = "clear"
+	drift_lab.free()
+
 	_teardown(world, system)
+
+
+## Map slimes wander: free every enemy-layer body so chain/drift probes
+## measure exactly the slimes we place.
+func _clear_enemies(world: Node2D) -> void:
+	for child in world.get_entity_parent().get_children():
+		if child is CharacterBody2D and (child.collision_layer & 4) != 0:
+			child.queue_free()
+	await physics_frame
+	await physics_frame
+
+
+## A rooted 200hp slime at `pos` under `lab`: positions stay crisp for
+## chain-distance assertions.
+func _frozen_slime(lab: Node2D, pos: Vector2) -> CharacterBody2D:
+	var s: CharacterBody2D = load("res://scenes/enemies/slime.tscn").instantiate()
+	s.position = pos
+	s.hp = 200.0
+	lab.add_child(s)
+	s.apply_freeze(4.0)
+	return s
 
 
 func _teardown(world: Node2D, system: Node) -> void:
