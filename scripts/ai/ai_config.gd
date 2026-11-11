@@ -11,12 +11,14 @@ const USER_PATH := "user://ai_config.json"
 const KEY_PLACEHOLDER := "在此填入"
 
 static var _cached: Dictionary = {}
+static var _loaded := false
 
 
 ## Re-read the config file (res:// first, then user://). A missing or
 ## damaged file leaves the config empty — never an error path.
 ## (Named load_from: "reload" collides with Script.reload.)
 static func load_from(path := "") -> void:
+	_loaded = true
 	_cached = {}
 	var text := ""
 	if path != "":
@@ -48,15 +50,32 @@ static func _read_text(path: String) -> String:
 ## True when base_url / api_key / chat_model are all filled with real
 ## values (placeholders don't count).
 static func is_configured() -> bool:
+	_ensure_loaded()
 	return base_url() != "" and api_key() != "" and chat_model() != ""
+
+
+## Snapshot for test suites (stash the real config, force AI off,
+## restore afterwards).
+static func capture_config() -> Dictionary:
+	_ensure_loaded()
+	return _cached.duplicate(true)
 
 
 ## Tests inject a parsed config directly; {} restores "AI off".
 static func apply_config(cfg: Dictionary) -> void:
 	_cached = cfg.duplicate(true)
+	_loaded = true
+
+
+## First access in a fresh process reads the config file exactly once.
+static func _ensure_loaded() -> void:
+	if _loaded:
+		return
+	load_from()
 
 
 static func base_url() -> String:
+	_ensure_loaded()
 	var v := str(_cached.get("base_url", "")).strip_edges()
 	if v.is_empty() or v.contains("example.com"):
 		return ""
@@ -64,6 +83,7 @@ static func base_url() -> String:
 
 
 static func api_key() -> String:
+	_ensure_loaded()
 	var v := str(_cached.get("api_key", "")).strip_edges()
 	if v.is_empty() or v.contains(KEY_PLACEHOLDER):
 		return ""
@@ -71,6 +91,7 @@ static func api_key() -> String:
 
 
 static func chat_model() -> String:
+	_ensure_loaded()
 	var v := str(_cached.get("chat_model", "")).strip_edges()
 	if v.is_empty() or v.contains(KEY_PLACEHOLDER):
 		return ""
@@ -78,10 +99,12 @@ static func chat_model() -> String:
 
 
 static func embedding_model() -> String:
+	_ensure_loaded()
 	return str(_cached.get("embedding_model", "")).strip_edges()
 
 
 static func timeout_seconds() -> float:
+	_ensure_loaded()
 	return clampf(float(_cached.get("request_timeout_seconds", 12.0)), 3.0, 60.0)
 
 

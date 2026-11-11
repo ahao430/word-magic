@@ -7,6 +7,7 @@ extends SceneTree
 ##
 ##   godot --headless --path . -s res://tests/spell_cache_test.gd
 
+var _ai_backup := {}
 var _failures := 0
 ## Isolation: back up / clear / restore the developer's real cache file.
 var _cache_backup := ""
@@ -17,6 +18,8 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_ai_backup = AiConfig.capture_config()
+	AiConfig.apply_config({})
 	_cache_backup = ""
 	if FileAccess.file_exists(SaveManager.SPELL_CACHE_PATH):
 		var mf := FileAccess.open(SaveManager.SPELL_CACHE_PATH, FileAccess.READ)
@@ -136,6 +139,7 @@ func _run() -> void:
 	else:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SaveManager.SPELL_CACHE_PATH))
 	SpellCache.reset()
+	AiConfig.apply_config(_ai_backup)
 	_finish()
 
 

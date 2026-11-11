@@ -7,6 +7,7 @@ extends SceneTree
 ##
 ##   godot --headless --path . -s res://tests/ai_provider_test.gd
 
+var _ai_backup := {}
 var _failures := 0
 var _cache_backup := ""
 var _memory_backup := ""
@@ -17,6 +18,8 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_ai_backup = AiConfig.capture_config()
+	AiConfig.apply_config({})
 	_cache_backup = TestIsolation.stash(TestIsolation.CACHE_PATH)
 	_memory_backup = TestIsolation.stash(TestIsolation.MEMORY_PATH)
 	SpellCache.reset()
@@ -139,6 +142,7 @@ func _run() -> void:
 	TestIsolation.unstash(TestIsolation.MEMORY_PATH, _memory_backup)
 	SpellCache.reset()
 	WorldMemory.reset()
+	AiConfig.apply_config(_ai_backup)
 	_finish()
 
 

@@ -5,6 +5,7 @@ extends SceneTree
 ##
 ##   godot --headless --path . -s res://tests/spellbook_test.gd
 
+var _ai_backup := {}
 var _failures := 0
 ## World memory isolation: the main scene is real; nothing here records
 ## permanent events, but keep the run hermetic anyway.
@@ -17,6 +18,8 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_ai_backup = AiConfig.capture_config()
+	AiConfig.apply_config({})
 	_memory_backup = TestIsolation.stash(TestIsolation.MEMORY_PATH)
 	_cache_backup = TestIsolation.stash(TestIsolation.CACHE_PATH)
 	WorldMemory.reset()
@@ -103,6 +106,7 @@ func _run() -> void:
 	TestIsolation.unstash(TestIsolation.CACHE_PATH, _cache_backup)
 	WorldMemory.reset()
 	SpellCache.reset()
+	AiConfig.apply_config(_ai_backup)
 	_finish()
 
 

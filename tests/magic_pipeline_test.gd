@@ -5,6 +5,7 @@ extends SceneTree
 ##
 ##   godot --headless --path . -s res://tests/magic_pipeline_test.gd
 
+var _ai_backup := {}
 var _failures := 0
 ## Isolation: casts here persist spell-cache entries — stash the dev's
 ## real cache and restore it at the end.
@@ -16,6 +17,8 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_ai_backup = AiConfig.capture_config()
+	AiConfig.apply_config({})
 	_cache_backup = TestIsolation.stash(TestIsolation.CACHE_PATH)
 	SpellCache.reset()
 
@@ -113,6 +116,7 @@ func _run() -> void:
 
 	TestIsolation.unstash(TestIsolation.CACHE_PATH, _cache_backup)
 	SpellCache.reset()
+	AiConfig.apply_config(_ai_backup)
 	_finish()
 
 

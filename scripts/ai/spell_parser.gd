@@ -17,7 +17,9 @@ static func parse(raw_text: String) -> Dictionary:
 		{"role": "system", "content": _system_prompt()},
 		{"role": "user", "content": raw_text.strip_edges()},
 	]
-	var resp: Dictionary = await ChatProvider.complete(messages)
+	# 1024-token budget: reasoning models spend a large share of the
+	# window thinking before the JSON lands.
+	var resp: Dictionary = await ChatProvider.complete(messages, 0.2, 1024)
 	if not resp["ok"]:
 		return {"ok": false, "reason": resp["reason"], "message": resp["message"],
 				"draft": {}}
@@ -75,14 +77,15 @@ static func parse_response(content: String) -> Dictionary:
 ## Prompt built from the validator's own whitelists — one source of
 ## truth; the model can never learn an option the game would reject.
 static func _system_prompt() -> String:
-	return "你是一个咒语解析器。把用户的咒语翻译成一个 JSON 对象，只输出 JSON，不要任何其他文字。\n" \
-			+ "字段要求：\n" \
+	return "你是咒语解析器，把用户的咒语转成一个 JSON 对象。只输出 JSON 本身，不要解释、不要围栏标记。\n" \
+			+ "硬性规则：\n" \
 			+ "- display: 字符串，咒语的中文短名\n" \
-			+ "- element: 必须是以下之一 %s\n" \
-			+ "- shape: 必须是以下之一 %s\n" \
-			+ "- mechanics: 字符串数组，只能包含 %s\n" \
-			+ "- parameters: 对象，含 damage(0-60), radius(0-160), speed(0-420), duration(0-5) 四个数字\n" \
-			+ "数值按咒语语气估量，保持在给定范围内。" % [
-				str(ValidatorScript.ELEMENTS),
-				str(ValidatorScript.SHAPES),
-				str(ValidatorScript.MECHANICS)]
+			+ "- element: 必须原样使用以下英文单词之一，禁止翻译成中文: " + str(ValidatorScript.ELEMENTS) + "\n" \
+			+ "- shape: 必须原样使用以下英文单词之一，禁止翻译成中文: " + str(ValidatorScript.SHAPES) + "\n" \
+			+ "- mechanics: 字符串数组，只能包含: " + str(ValidatorScript.MECHANICS) + "（可以为空数组）\n" \
+			+ "- parameters: 四个数字 damage(0-60), radius(0-160), speed(0-420), duration(0-5)\n" \
+			+ "\n" \
+			+ "示例输入：给我来发大火球\n" \
+			+ "示例输出：{\"display\":\"大火球\",\"element\":\"fire\",\"shape\":\"projectile\",\"mechanics\":[\"damage\"],\"parameters\":{\"damage\":30,\"radius\":10,\"speed\":300,\"duration\":2}}\n" \
+			+ "\n" \
+			+ "现在解析用户的咒语，只输出 JSON。"

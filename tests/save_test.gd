@@ -7,6 +7,7 @@ extends SceneTree
 
 const SLOT := "slot_test"
 
+var _ai_backup := {}
 var _failures := 0
 ## World memory isolation: the rune activation in here persists a
 ## permanent event — back up / clear / restore the real file.
@@ -19,6 +20,8 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_ai_backup = AiConfig.capture_config()
+	AiConfig.apply_config({})
 	_memory_backup = TestIsolation.stash(TestIsolation.MEMORY_PATH)
 	_cache_backup = TestIsolation.stash(TestIsolation.CACHE_PATH)
 	WorldMemory.reset()
@@ -147,6 +150,7 @@ func _run() -> void:
 	WorldMemory.reset()
 	SpellCache.reset()
 
+	AiConfig.apply_config(_ai_backup)
 	_finish()
 
 
