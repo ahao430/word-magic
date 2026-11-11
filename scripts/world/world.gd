@@ -4,8 +4,12 @@ extends Node2D
 ## transition tiles, scatters collidable props (trees/rocks) and
 ## non-colliding bushes, and walls the map borders.
 
-const MAP_CELLS := Vector2i(48, 32)
+const MAP_CELLS := Vector2i(64, 32)
 const TILE_SOURCE_ID := 0
+
+## 迷雾湿地 (the Misty Wetland): everything east of this column. The
+## stone path (row 16) runs through the boundary gate straight into it.
+const WETLAND_START := 48
 
 ## Atlas coordinates in forest_ground_atlas.png (4 cols x 11 rows).
 ## Rows 0-1 base, 2-5 grass->dirt transitions, 6 water surfaces,
@@ -52,9 +56,19 @@ const FORD_ROW := 12
 ## Boss arena: the Slime King holds a cleared clearing in the far NE.
 const BOSS_CELL := Vector2i(38, 8)
 
+## Wetland landmarks: the boundary gate pillars flank the path row, and
+## the elite slime holds the deep swamp.
+const GATE_N_CELL := Vector2i(WETLAND_START, 15)
+const GATE_S_CELL := Vector2i(WETLAND_START, 17)
+const ELITE_CELL := Vector2i(58, 10)
+
 ## Fired once when the boss dies (the boss_defeated flag + save tier
 ## record it; this notifies the HUD).
 signal boss_died
+
+## Fired once per save lifetime when the player first enters the
+## wetland (permanent world memory).
+signal region_discovered(region_name: String)
 
 
 @onready var ground: TileMapLayer = $GroundLayer
@@ -63,6 +77,12 @@ signal boss_died
 ## Session world state (saved/restored with the session save).
 var ford_built := false
 var boss_defeated := false
+
+## Permanent region progress (replayed from world memory on load).
+var wetland_discovered := false
+
+## Region poll accumulator: bias + discovery checks run at 2 Hz.
+var _region_acc := 0.0
 
 ## Open-water shimmer: the 4 surface variants cycle slowly; per-cell
 ## phase offset keeps the swap from looking like a global strobe.
@@ -87,11 +107,24 @@ func _ready() -> void:
 
 	var dirt_cell := _classify(macro)
 	var water_cell := river_cells()
+	for cell in wetland_pond_cells():
+		water_cell[cell] = true
 	_paint_ground(dirt_cell, water_cell, macro, detail)
-	_scatter_props(compute_placements(dirt_cell, water_cell, MAP_CELLS, PROP_SEED))
+	# Two-pass prop scatter: the forest pass runs on the historical 48x32
+	# window with river-only water (byte-identical to the pre-wetland
+	# layout — old saves and tests keep their props), the wetland pass
+	# seeds its own sequence.
+	var west_placements: Array[Dictionary] = compute_placements(dirt_cell,
+			river_cells(), Vector2i(WETLAND_START, MAP_CELLS.y), PROP_SEED)
+	var east_placements: Array[Dictionary] = compute_placements(dirt_cell,
+			wetland_pond_cells(), Vector2i(MAP_CELLS.x - WETLAND_START, MAP_CELLS.y),
+			PROP_SEED + 1, Vector2i(WETLAND_START, 0))
+	_scatter_props(west_placements + east_placements)
 	_scatter_slimes(dirt_cell, water_cell)
+	_scatter_wetland_slimes(water_cell)
 	_spawn_boss()
 	_setup_puzzle()
+	_spawn_gate()
 	_build_walls()
 	_setup_water_shimmer(water_cell)
 	_setup_waterfall(water_cell)
@@ -114,6 +147,8 @@ func _apply_world_memory() -> void:
 				child.call("force_activate")
 	if WorldMemory.has_event(WorldMemory.EVENT_FORD):
 		build_ford()
+	if WorldMemory.has_event(WorldMemory.EVENT_REGION):
+		wetland_discovered = true
 
 
 ## Parent to reparent entities into so they y-sort against props.
@@ -136,6 +171,26 @@ func is_blocked_ground(world_pos: Vector2) -> bool:
 	return data != null and data.get_collision_polygons_count(0) > 0
 
 
+## Region name for the HUD and feature gates — the boundary IS the gate.
+static func region_name_at(world_pos: Vector2) -> String:
+	return "迷雾湿地" if world_pos.x >= float(WETLAND_START) * 32.0 else "森林"
+
+
+## Deterministic wetland ponds: 2x2 cell blocks hashed from block
+## coordinates (~26% water). The stone path row overrides in painting,
+## so the road through the swamp reads as a boardwalk.
+static func wetland_pond_cells() -> Dictionary:
+	var ponds := {}
+	for by in range(1, 15):
+		for bx in range(25, 31):
+			var h := absf(fmod(sin(bx * 127.1 + by * 311.7) * 43758.5453, 1.0))
+			if h < 0.30:
+				for dy in 2:
+					for dx in 2:
+						ponds[Vector2i(bx * 2 + dx, by * 2 + dy)] = true
+	return ponds
+
+
 ## Cells covered by the meandering river (3 wide, widening to 5).
 static func river_cells() -> Dictionary:
 	var water := {}
@@ -153,19 +208,19 @@ static func river_cells() -> Dictionary:
 ## "variant": int}, ...]. Never places in water, on stone paths, outside
 ## the map, in the spawn clearing, or twice on the same cell.
 static func compute_placements(dirt_cell: Dictionary, water_cell: Dictionary,
-		map_cells: Vector2i, seed: int) -> Array[Dictionary]:
+		map_cells: Vector2i, seed: int, origin := Vector2i.ZERO) -> Array[Dictionary]:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
 	var occupied := {}
 	var placements: Array[Dictionary] = []
 	for y in map_cells.y:
 		for x in map_cells.x:
-			var cell := Vector2i(x, y)
+			var cell := origin + Vector2i(x, y)
 			if water_cell.has(cell):
 				continue
 			if cell == SPAWN_CELL or (Vector2(cell - SPAWN_CELL).length() <= SPAWN_CLEAR_RADIUS):
 				continue
-			if x == SPAWN_CELL.x or y == SPAWN_CELL.y:
+			if cell.x == SPAWN_CELL.x or cell.y == SPAWN_CELL.y:
 				continue  # stone cross paths stay clear
 			if occupied.has(cell):
 				continue
@@ -190,7 +245,13 @@ func _classify(macro: FastNoiseLite) -> Dictionary:
 	var dirt_cell := {}
 	for y in MAP_CELLS.y:
 		for x in MAP_CELLS.x:
-			dirt_cell[Vector2i(x, y)] = macro.get_noise_2d(x, y) <= -0.2
+			var cell := Vector2i(x, y)
+			var n := macro.get_noise_2d(x, y)
+			# The wetland is muddier: a far wider dirt threshold.
+			if x >= WETLAND_START:
+				dirt_cell[cell] = n <= 0.15
+			else:
+				dirt_cell[cell] = n <= -0.2
 	return dirt_cell
 
 
@@ -230,6 +291,7 @@ func _paint_ground(dirt_cell: Dictionary, water_cell: Dictionary,
 func _process(delta: float) -> void:
 	_sway_time += delta
 	_sway_trees()
+	_poll_region(delta)
 	_water_anim_acc += delta
 	if _water_anim_acc < WATER_CYCLE_TIME:
 		return
@@ -389,7 +451,7 @@ func capture_state() -> Dictionary:
 	for child in props.get_children():
 		if child.has_method("try_activate"):
 			rune_state = child.state
-		elif child is CharacterBody2D and child.name.begins_with("Slime_"):
+		elif child is CharacterBody2D and child.name.begins_with("Slime"):
 			alive_slimes.append(child.name)
 	var weather := get_weather()
 	var weather_state: Dictionary = weather.capture_state() if weather != null else {}
@@ -420,7 +482,7 @@ func restore_state(data: Dictionary) -> void:
 				child.call("force_activate")
 	var alive: Array = data.get("alive_slimes", [])
 	for child in props.get_children():
-		if child is CharacterBody2D and child.name.begins_with("Slime_"):
+		if child is CharacterBody2D and child.name.begins_with("Slime"):
 			if not alive.has(child.name):
 				child.queue_free()
 	if data.has("weather") and not data["weather"].is_empty():
@@ -451,6 +513,8 @@ func _scatter_slimes(dirt_cell: Dictionary, water_cell: Dictionary) -> void:
 		for x in MAP_CELLS.x:
 			if placed >= SLIME_COUNT:
 				break
+			if x >= WETLAND_START:
+				break  # the forest's own scatter never crosses the gate
 			var cell := Vector2i(x, y)
 			if water_cell.has(cell) or dirt_cell.get(cell, false):
 				continue
@@ -464,6 +528,87 @@ func _scatter_slimes(dirt_cell: Dictionary, water_cell: Dictionary) -> void:
 				slime.position = Vector2(cell) * 32.0 + Vector2(16.0, 24.0)
 				props.add_child(slime)
 				placed += 1
+
+
+## Wetland population: three regular slimes on eastern land cells plus
+## one deep-swamp elite (60hp, swollen). Names follow the "Slime*"
+## convention so the session save's alive-list covers them too.
+func _scatter_wetland_slimes(water_cell: Dictionary) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 8888
+	var placed := 0
+	for y in range(MAP_CELLS.y - 1, -1, -1):
+		if placed >= 3:
+			break
+		for x in range(MAP_CELLS.x - 1, WETLAND_START, -1):
+			if placed >= 3:
+				break
+			var cell := Vector2i(x, y)
+			if water_cell.has(cell) or x == SPAWN_CELL.x or y == SPAWN_CELL.y:
+				continue
+			if Vector2(cell - Vector2i(ELITE_CELL)).length() < 4.0:
+				continue
+			if rng.randf() < 0.05:
+				var slime: CharacterBody2D = load("res://scenes/enemies/slime.tscn").instantiate()
+				slime.name = "Slime_%d_%d" % [cell.x, cell.y]
+				slime.position = Vector2(cell) * 32.0 + Vector2(16.0, 24.0)
+				props.add_child(slime)
+				placed += 1
+	var elite: CharacterBody2D = load("res://scenes/enemies/slime.tscn").instantiate()
+	elite.name = "SlimeElite_%d_%d" % [ELITE_CELL.x, ELITE_CELL.y]
+	elite.position = Vector2(ELITE_CELL) * 32.0 + Vector2(16.0, 24.0)
+	props.add_child(elite)
+	elite.set("hp", 60.0)
+	elite.scale = Vector2(1.3, 1.3)
+	elite.get_node("SlimeSprite").modulate = Color(0.55, 0.75, 0.5)
+
+
+## Boundary gate: two stone pillars flanking the path row — the road
+## into the wetland passes between them.
+func _spawn_gate() -> void:
+	for pair in [["Gate_Pillar_N", GATE_N_CELL], ["Gate_Pillar_S", GATE_S_CELL]]:
+		for child in props.get_children():
+			var is_blocking_prop: bool = child.name.begins_with("Tree_") or child.name.begins_with("Rock_")
+			if is_blocking_prop and Vector2i(int(child.position.x) / 32, int(child.position.y - 16) / 32) == pair[1]:
+				child.queue_free()
+		var pillar := StaticBody2D.new()
+		pillar.name = pair[0]
+		pillar.position = _cell_bottom_center(pair[1])
+		var shape := RectangleShape2D.new()
+		shape.size = Vector2(14, 40)
+		var collider := CollisionShape2D.new()
+		collider.shape = shape
+		collider.position = Vector2(0, -20)
+		pillar.add_child(collider)
+		var sprite := Sprite2D.new()
+		sprite.texture = load("res://assets/sprites/props/rock_01.png")
+		sprite.scale = Vector2(0.9, 2.4)
+		sprite.position = Vector2(0, -22)
+		pillar.add_child(sprite)
+		props.add_child(pillar)
+
+
+## 2 Hz region poll: feed the weather system its region bias and fire
+## the one-shot wetland discovery (permanent world memory).
+func _poll_region(delta: float) -> void:
+	_region_acc += delta
+	if _region_acc < 0.5:
+		return
+	_region_acc = 0.0
+	var player: CharacterBody2D = null
+	for child in props.get_children():
+		if child is CharacterBody2D and child.name == "Player":
+			player = child
+			break
+	if player == null:
+		return
+	var system := get_weather()
+	if system != null:
+		system.region_bias = "wetland" if player.global_position.x >= float(WETLAND_START) * 32.0 else "forest"
+	if not wetland_discovered and system != null and system.region_bias == "wetland":
+		wetland_discovered = true
+		WorldMemory.record_and_persist(WorldMemory.EVENT_REGION)
+		region_discovered.emit("迷雾湿地")
 
 
 func _spawn_boss() -> void:

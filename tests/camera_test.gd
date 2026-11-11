@@ -32,10 +32,11 @@ func _run() -> void:
 	await physics_frame
 
 	# --- Wiring: smoothing on, limits at the map rectangle ---
+	var map_px: Vector2 = main.get_node("World").map_pixel_size()
 	_expect(cam.position_smoothing_enabled and cam.position_smoothing_speed > 0.0,
 			"smoothing enabled (speed %.0f)" % cam.position_smoothing_speed)
 	_expect(cam.limit_left == 0 and cam.limit_top == 0
-			and cam.limit_right == 1536 and cam.limit_bottom == 1024,
+			and cam.limit_right == int(map_px.x) and cam.limit_bottom == int(map_px.y),
 			"limits clamp to the map (r=%d b=%d)" % [cam.limit_right, cam.limit_bottom])
 
 	# --- Corner clamps: the viewport never shows void ---
@@ -47,12 +48,12 @@ func _run() -> void:
 	_expect(center.distance_to(Vector2(640, 360)) < 2.0,
 			"top-left corner clamps the view (center %s)" % center)
 
-	player.global_position = Vector2(1500, 1000)
+	player.global_position = map_px - Vector2(48, 24)
 	cam.reset_smoothing()
 	await physics_frame
 	await physics_frame
 	center = cam.get_screen_center_position()
-	_expect(center.distance_to(Vector2(896, 664)) < 2.0,
+	_expect(center.distance_to(Vector2(map_px.x - 640.0, map_px.y - 360.0)) < 2.0,
 			"bottom-right corner clamps the view (center %s)" % center)
 
 	# --- Free roam: the view centers on the player ---

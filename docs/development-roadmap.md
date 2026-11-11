@@ -13,7 +13,7 @@
 | 4 环境互动与机关 | ✅ | 符文石解谜（规则验证）→ 渡口重建 |
 | 5 AI 缓存和语音 | ✅ | Exact/Normalized/**Semantic** 三层缓存 + AI 解析（live e2e 通过）+ 语音输入（PTT + 确认流 + 口令门控）；语音 ASR 与语义 Embedding 等所有者配置端点即启用 |
 | 6 世界记忆和存档 | ✅ | 三层模型（世界记忆/会话/缓存）+ **多槽位管理 UI（3 槽 + 元信息卡 + 删除）** + 设置持久化 |
-| 7 开放世界和成长 | — | 多区域地图、程序化世界、NPC、成长（未开始；数值框架已稳） |
+| 7 开放世界和成长 | ◐ | **第二区域「迷雾湿地」骨架**（区域天气偏置/界门/精英/发现记忆）；程序化世界、NPC、成长未开始 |
 | 8 正式版本 | ◐ | **导出打包 ✅**（本地双平台 + CI 滚动 Release）；平衡守卫 ✅；发布打磨进行中 |
 
 ## 系统清单
@@ -32,7 +32,7 @@
 | UI | `scripts/ui/` | 标题页、暂停面板、法术图鉴（滚动/筛选）、存档槽面板、HUD 血魔条 + Boss 血条 + 天气指示 |
 | 工具链 | `tools/dev/` `.github/` | run_tests.sh 一键回归（看门狗/汇总）+ 提交前检查表 + CI（测试 + 双平台导出 + 滚动 Release） |
 
-## 测试索引（32 套 / 713+ 断言）
+## 测试索引（33 套 / 730+ 断言）
 
 `tools/dev/run_tests.sh` 一键全量（发现 + 看门狗 + 汇总）；单套
 `godot --headless --path . -s res://tests/<name>_test.gd`：
@@ -43,7 +43,7 @@ player_animation · magic_pipeline · slime_sprites · combat · spell_session �
 spell_cache(35) · shapes(28) · puzzle · save · sfx · water_anim · ambient ·
 boss(31) · world_memory(24) · spellbook · flow(14) · camera(7) · settings(18) ·
 slots(18) · **ai_provider(34)** · **mouse_combat(20)** · **voice(19)** ·
-**weather(50)** · **balance(30)**
+**weather(50)** · **balance(30)** · **regions(17)**
 
 （加粗为 AI/语音/天气/平衡阶段新增；括号内为断言数。）
 测试隔离：`tests/test_isolation.gd` 统一 stash/unstash `user://` 下真实文件
@@ -75,6 +75,7 @@ slots(18) · **ai_provider(34)** · **mouse_combat(20)** · **voice(19)** ·
 | 71f8e41 | 语义缓存（§7.1 管线收口） |
 | 9c92c68 → cc3e229 | 导出打包（本地双平台 + CI 滚动 Release，四轮调试全绿） |
 | af4fd8f | 平衡轮（潜力计价 + 2.0 效率守卫 + knockback 真实现） |
+| （本轮） | 第二区域骨架：迷雾湿地（区域偏置/界门/精英/永久发现记忆） |
 
 ## 已知限制与待办
 
@@ -89,5 +90,5 @@ slots(18) · **ai_provider(34)** · **mouse_combat(20)** · **voice(19)** ·
 
 ## 下一步（Phase 7 备选方向，源自 plan.md）
 
-多区域地图与程序化世界骨架、兴趣点（POI）、NPC 与长期反馈、玩家成长曲线——
-数值与测试框架已就绪，任一方向均可独立成轮。
+湿地内容化（POI/奖励/精英掉落）、程序化世界种子、NPC 与长期反馈、玩家成长曲线。
+区域骨架与两段式散射已就绪，旧世界字节级不变。

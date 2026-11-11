@@ -14,6 +14,7 @@ extends RefCounted
 const EVENT_RUNE := "rune_awakened"
 const EVENT_FORD := "ford_built"
 const EVENT_BOSS := "boss_slime_defeated"
+const EVENT_REGION := "region_wetland_discovered"
 
 static var _events: Dictionary = {}
 static var _loaded := false

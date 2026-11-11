@@ -51,6 +51,8 @@ func _ready() -> void:
 	spellbook_filter.text_changed.connect(_on_spellbook_filter)
 	$World.boss_died.connect(func() -> void:
 		_toast("史莱姆王倒下了！森林深处恢复了平静", true))
+	$World.region_discovered.connect(func(region_name: String) -> void:
+		_toast("踏入%s……这里的雨水似乎永不停歇" % region_name, true))
 	GameManager.set_state(GameManager.GameState.PLAYING)
 	# One frame late: attaching the music player during _ready makes the
 	# busy root reject add_child.
@@ -89,7 +91,8 @@ func _process(_delta: float) -> void:
 	if voice.is_recording_held() and not Input.is_action_pressed("voice_talk"):
 		voice.talk_released()
 	var band := Weather.wind_band()
-	weather_label.text = "天气：%s%s %s%s" % [Weather.describe(),
+	var region: String = $World.region_name_at(player.global_position)
+	weather_label.text = "【%s】天气：%s%s %s%s" % [region, Weather.describe(),
 			Weather.wind_arrow(), "" if band == "" else "·" + band + "风",
 			Weather.tactical_hint()]
 	_update_boss_bar()

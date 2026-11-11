@@ -22,6 +22,11 @@ var _timer := 16.0
 var _target_wind := Vector2.ZERO
 var _rng := RandomNumberGenerator.new()
 
+## Region weather bias ("forest" uniform; "wetland" doubles the wet
+## states — 迷雾湿地 lives up to its name). Owned by the world's
+## region poll; pure weights exposed for tests.
+var region_bias := "forest"
+
 var _rain: CPUParticles2D
 var _leaves: CPUParticles2D
 
@@ -50,7 +55,29 @@ func _physics_process(delta: float) -> void:
 		_leaves.direction = Weather.wind.normalized() if Weather.wind.length() > 1.0 else Vector2.RIGHT
 	_timer -= delta
 	if _timer <= 0.0:
-		force_state(Weather.STATES[_rng.randi() % Weather.STATES.size()])
+		force_state(_pick_state())
+
+
+## Weighted state choice: uniform in the forest, rain/storm doubled in
+## the wetland (the region's identity is its weather).
+func _pick_state() -> String:
+	var weights: Dictionary = state_weights(region_bias)
+	var total := 0
+	for w in weights.values():
+		total += int(w)
+	var roll := _rng.randi() % maxi(total, 1)
+	for state in weights:
+		roll -= int(weights[state])
+		if roll < 0:
+			return state
+	return Weather.STATES[0]
+
+
+## Pure weights per region (test seam).
+static func state_weights(bias: String) -> Dictionary:
+	if bias == "wetland":
+		return {"clear": 1.0, "windy": 1.0, "rain": 2.0, "storm": 2.0}
+	return {"clear": 1.0, "windy": 1.0, "rain": 1.0, "storm": 1.0}
 
 
 func _pick_wind() -> void:
