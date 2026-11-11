@@ -17,6 +17,7 @@ extends RefCounted
 # classes through .godot's cache, which lags until an editor refresh.
 const AiConfigScript := preload("res://scripts/ai/ai_config.gd")
 const SpellParserScript := preload("res://scripts/ai/spell_parser.gd")
+const EmbeddingProviderScript := preload("res://scripts/ai/embedding_provider.gd")
 
 
 static func cast(raw_text: String, caster: Node, world: Node, session: SpellSession) -> Dictionary:
@@ -40,6 +41,18 @@ static func cast(raw_text: String, caster: Node, world: Node, session: SpellSess
 	if draft.is_empty():
 		draft = LocalSpellRegistry.lookup(normalized)
 		source = "registry"
+	# Semantic layer (§7.1): a paraphrase of a previously parsed spell
+	# resolves by vector similarity before the AI is bothered. Infra
+	# failures here are a soft fallthrough — the AI leg still runs.
+	var phrase_vec: Array = []
+	if draft.is_empty() and AiConfigScript.is_embedding_configured():
+		var embedded: Dictionary = await EmbeddingProviderScript.embed(normalized)
+		if embedded["ok"]:
+			phrase_vec = embedded["vector"]
+			var near: Dictionary = SpellCache.lookup_semantic(phrase_vec)
+			if not near.is_empty():
+				draft = near["draft"]
+				source = "cache_semantic"
 	if draft.is_empty() and AiConfigScript.is_configured():
 		# AI leg: free-form incantations the local table doesn't know.
 		# Infra failures (timeout/rate limit/unavailable/garbage) fail
@@ -60,6 +73,10 @@ static func cast(raw_text: String, caster: Node, world: Node, session: SpellSess
 	# A fresh registry/AI hit is remembered for future adventures; cache
 	# hits are re-stored harmlessly (idempotent overwrite).
 	SpellCache.store(raw_text, normalized, draft)
+	# AI-parsed spells with a live embedding also enter the semantic
+	# store (same vector the lookup used — one request per novel phrase).
+	if source == "ai" and not phrase_vec.is_empty():
+		SpellCache.store_semantic(raw_text, normalized, phrase_vec, draft)
 
 	var cost: int = SpellBalance.compute_cost(checked["spell"])
 

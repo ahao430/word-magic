@@ -4,7 +4,8 @@
 		"ai.json 已被 .gitignore 忽略，密钥不会进入仓库；任何 OpenAI 兼容接口均可。",
 		"留空或保持占位符时，游戏完全离线运行：本地咒语表照常工作。",
 		"填写保存后无需改代码，下次施法未收录的咒语时自动走 AI 解析。",
-		"语音输入：asr_model 留空 = 语音关闭；填写后按住 V 说话，松开后确认施法。asr_base_url 留空则复用 base_url。任何 OpenAI 兼容 /audio/transcriptions 服务均可（如 whisper.cpp server）。"
+		"语音输入：asr_model 留空 = 语音关闭；填写后按住 V 说话，松开后确认施法。asr_base_url 留空则复用 base_url。任何 OpenAI 兼容 /audio/transcriptions 服务均可（如 whisper.cpp server）。",
+		"语义缓存：embedding_model 留空 = 关闭；填写后（任何 OpenAI 兼容 /embeddings 服务）相近说法的法术会复用已解析结果，仍过校验与会话唯一门。"
 	],
 	"base_url": "https://api.example.com/v1",
 	"api_key": "在此填入你的 API Key",

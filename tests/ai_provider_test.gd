@@ -133,8 +133,78 @@ func _run() -> void:
 	_expect(r7["ok"] and r7["source"] == "registry" and int(provider_hit["n"]) == 0,
 			"registered spells skip the network entirely")
 
+	# --- Semantic layer: config gating + provider seam + facade wiring ---
+	AiConfig.apply_config({"base_url": "https://fake.local/v1", "api_key": "k",
+			"chat_model": "m", "embedding_model": "e"})
+	_expect(AiConfig.is_embedding_configured()
+			and AiConfig.embedding_url() == "https://fake.local/v1/embeddings",
+			"embedding model gates the semantic layer on")
+	AiConfig.apply_config({"base_url": "https://x.example/v1", "api_key": "k",
+			"chat_model": "m", "embedding_model": "在此填入"})
+	_expect(not AiConfig.is_embedding_configured(),
+			"placeholder embedding model keeps it off")
+	AiConfig.apply_config({})
+	var e0: Dictionary = await EmbeddingProvider.embed("x")
+	_expect(e0["reason"] == "embedding_unconfigured",
+			"unconfigured embedding refuses softly")
+	AiConfig.apply_config({"base_url": "https://fake.local/v1", "api_key": "k",
+			"chat_model": "m", "embedding_model": "e"})
+	var e1: Dictionary = await EmbeddingProvider.embed("  ")
+	_expect(e1["reason"] == "embedding_empty", "blank phrases never embed")
+	EmbeddingProvider.mock_embed = func(_t): return {"ok": true, "vector": [1.0, 0.0],
+			"reason": "ok", "message": ""}
+	var e2: Dictionary = await EmbeddingProvider.embed("abc")
+	_expect(e2["ok"] and e2["vector"] == [1.0, 0.0], "mock seam passes vectors through")
+	EmbeddingProvider.mock_embed = func(_t): return {"ok": false, "vector": [],
+			"reason": "embedding_timeout", "message": "语义比对超时"}
+	_expect((await EmbeddingProvider.embed("abc"))["reason"] == "embedding_timeout",
+			"embedding timeout taxonomy passes through")
+
+	# Facade: an AI hit stores its vector; a paraphrase then resolves
+	# from the semantic cache without another chat call.
+	var probe := {"display": "玄冰穿心刺", "element": "ice", "shape": "projectile",
+			"mechanics": ["damage"], "parameters": {"damage": 25.0, "speed": 300.0}}
+	var probe_json := JSON.stringify(probe)
+	EmbeddingProvider.mock_embed = func(_t): return {"ok": true, "vector": [1.0, 0.0],
+			"reason": "ok", "message": ""}
+	var chat_calls := {"n": 0}
+	ChatProvider.mock_complete = func(_m, _t) -> Dictionary:
+		chat_calls["n"] = int(chat_calls["n"]) + 1
+		return {"ok": true, "content": probe_json, "reason": "ok", "message": ""}
+	player.mana = 100.0
+	var q1: Dictionary = await MagicFacade.cast("玄冰穿心刺", player, world, SpellSession.new())
+	_expect(q1["ok"] and q1["source"] == "ai", "novel phrase parses via AI (%s)" % q1["source"])
+	var q2: Dictionary = await MagicFacade.cast("给我来一发玄冰穿心刺", player, world, SpellSession.new())
+	_expect(q2["ok"] and q2["source"] == "cache_semantic" and int(chat_calls["n"]) == 1,
+			"paraphrase hits the semantic cache (source=%s, chat=%d)"
+					% [q2["source"], chat_calls["n"]])
+	var q3: Dictionary = await MagicFacade.cast("再来一次玄冰穿心刺", player, world, SpellSession.new())
+	_expect(q3["ok"] and q3["source"] == "cache_semantic",
+			"semantic reuse is per-phrase, not one-shot")
+
+	# Embedding infra failure mid-lookup: soft fallthrough to the AI.
+	EmbeddingProvider.mock_embed = func(_t): return {"ok": false, "vector": [],
+			"reason": "embedding_unavailable", "message": "语义服务暂不可用"}
+	player.mana = 100.0
+	var q4: Dictionary = await MagicFacade.cast("寒光利刃", player, world, SpellSession.new())
+	_expect(q4["ok"] and q4["source"] == "ai",
+			"embedding failure falls through to the AI (%s)" % q4["source"])
+
+	# Embedding off: paraphrases re-parse (no semantic store happens).
+	EmbeddingProvider.mock_embed = Callable()
+	AiConfig.apply_config({"base_url": "https://fake.local/v1", "api_key": "k",
+			"chat_model": "m"})
+	player.mana = 100.0
+	var q5: Dictionary = await MagicFacade.cast("烈焰回旋", player, world, SpellSession.new())
+	_expect(q5["ok"] and q5["source"] == "ai", "AI works with embeddings off")
+	var calls_before: int = int(chat_calls["n"])
+	var q6: Dictionary = await MagicFacade.cast("烈焰回旋哈", player, world, SpellSession.new())
+	_expect(q6["ok"] and q6["source"] == "ai" and int(chat_calls["n"]) == calls_before + 1,
+			"without embeddings paraphrases re-parse (source=%s)" % q6["source"])
+
 	# Teardown.
 	ChatProvider.mock_complete = Callable()
+	EmbeddingProvider.mock_embed = Callable()
 	AiConfig.apply_config({})
 	world.free()
 

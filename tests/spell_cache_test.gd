@@ -71,6 +71,52 @@ func _run() -> void:
 	_expect(SpellCache.lookup_exact("火球术！")["element"] == "fire",
 			"reload_from_disk restores persisted cache")
 
+	# --- Semantic layer: cosine math, thresholds, dimensions ---
+	_expect(absf(SpellCache.cosine([1.0, 0.0], [1.0, 0.0]) - 1.0) < 0.0001,
+			"cosine of identical vectors is 1")
+	_expect(SpellCache.cosine([1.0, 0.0], [0.0, 1.0]) == 0.0,
+			"orthogonal vectors score 0")
+	_expect(SpellCache.cosine([1.0], [1.0, 0.0]) == 0.0
+			and SpellCache.cosine([], []) == 0.0,
+			"dimension mismatch and empty score 0, never crash")
+	_expect(SpellCache.cosine([0.0, 0.0], [1.0, 0.0]) == 0.0,
+			"zero vector scores 0")
+	# 0.87 angle vs [1,0]: above the 0.86 threshold; 0.8 stays below.
+	var almost := [0.87, sqrt(1.0 - 0.87 * 0.87)]
+	_expect(SpellCache.cosine(almost, [1.0, 0.0]) >= SpellCache.SEMANTIC_THRESHOLD,
+			"0.87 similarity passes the threshold")
+	var outside := [0.8, sqrt(1.0 - 0.8 * 0.8)]
+	_expect(SpellCache.cosine(outside, [1.0, 0.0]) < SpellCache.SEMANTIC_THRESHOLD,
+			"0.8 similarity stays below the threshold")
+	SpellCache.store_semantic("烈焰龙卷", "烈焰龙卷", [1.0, 0.0],
+			{"display": "烈焰龙卷", "element": "fire"})
+	var near_hit: Dictionary = SpellCache.lookup_semantic(almost)
+	_expect(near_hit["draft"].get("display", "") == "烈焰龙卷"
+			and near_hit["score"] >= 0.86,
+			"paraphrase vector retrieves the stored draft (%.3f)" % near_hit.get("score", 0.0))
+	_expect(SpellCache.lookup_semantic(outside).is_empty(),
+			"distant vectors score no hit")
+	_expect(SpellCache.lookup_semantic([1.0, 0.0, 0.0]).is_empty(),
+			"dimension change (new model) never matches old entries")
+	# Same norm stores overwrite in place, not duplicate.
+	SpellCache.store_semantic("烈焰龙卷", "烈焰龙卷", [0.0, 1.0],
+			{"display": "烈焰龙卷II", "element": "ice"})
+	var flip: Dictionary = SpellCache.lookup_semantic([0.0, 1.0])
+	_expect(flip["draft"].get("display", "") == "烈焰龙卷II"
+			and SpellCache.lookup_semantic([1.0, 0.0]).is_empty(),
+			"re-storing the same phrase replaces its vector entry")
+	# Empty vector is never stored (provider failure path).
+	SpellCache.store_semantic("无向量", "无向量", [],
+			{"display": "无向量", "element": "fire"})
+	_expect(SpellCache.lookup_semantic([]).is_empty(), "empty vectors are refused")
+	# Persistence: the semantic array survives a disk reload.
+	SpellCache.reload_from_disk()
+	_expect(SpellCache.lookup_semantic([0.0, 1.0])["draft"].get("display", "") == "烈焰龙卷II",
+			"semantic entries persist to disk and reload")
+	_expect(SpellCache.capture().has("semantic")
+			and not (SpellCache.capture()["semantic"] as Array).is_empty(),
+			"capture exposes the semantic tier")
+
 	# --- Facade integration on a real world ---
 	# Cold cache for the integration run: the unit block above stored
 	# entries that would otherwise satisfy these casts from the cache.

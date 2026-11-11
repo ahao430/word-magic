@@ -100,7 +100,22 @@ static func chat_model() -> String:
 
 static func embedding_model() -> String:
 	_ensure_loaded()
-	return str(_cached.get("embedding_model", "")).strip_edges()
+	var v := str(_cached.get("embedding_model", "")).strip_edges()
+	if v.is_empty() or v.contains(KEY_PLACEHOLDER):
+		return ""
+	return v
+
+
+## Full embeddings endpoint for the configured base URL.
+static func embedding_url() -> String:
+	return "%s/embeddings" % base_url()
+
+
+## The semantic cache is live only when an embedding model was filled
+## in (rides the same base_url / api_key as the chat seam).
+static func is_embedding_configured() -> bool:
+	_ensure_loaded()
+	return base_url() != "" and api_key() != "" and embedding_model() != ""
 
 
 static func timeout_seconds() -> float:

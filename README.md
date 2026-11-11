@@ -9,7 +9,7 @@
 ## 当前状态（2026-11-11）
 
 垂直切片完整可玩：**标题 → 森林探索 → 文字施法 → 战斗 → 史莱姆王 Boss → 符文解谜 →
-存读档 → 世界记忆跨重启**。31 套自动化测试全绿（632 断言）。详见
+存读档 → 世界记忆跨重启**。31 套自动化测试全绿（683 断言）。详见
 `docs/development-roadmap.md`。
 
 ## 快速开始
@@ -23,7 +23,7 @@ godot --headless --path . --import
 # 运行游戏（从标题页开始）
 godot --path .
 
-# 一键全量回归（31 套 / 632 断言，~2.5 分钟；--filter 可跑子集）
+# 一键全量回归（31 套 / 683 断言，~2.5 分钟；--filter 可跑子集）
 tools/dev/run_tests.sh
 
 # 游戏内截图验证（写 /tmp/wm_*.png；不要加 --headless）
@@ -67,6 +67,8 @@ cp config/ai.example.json config/ai.json   # 然后编辑 ai.json 填入：
 # base_url     如 https://api.xxx.com/v1
 # api_key      你的密钥（ai.json 已被 .gitignore 忽略，绝不入库）
 # chat_model   模型名
+# embedding_model（可选）任何 OpenAI 兼容 /embeddings 服务——开启后相近说法的
+#              咒语复用已解析结果（语义缓存），仍过校验与会话唯一门
 ```
 
 保存即生效（无需改代码）：未收录的咒语将走 AI 解析，产出仍 100% 经过本地
