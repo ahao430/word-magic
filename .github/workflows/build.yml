@@ -107,16 +107,15 @@ jobs:
       - name: 导出单文件 exe（内嵌 pck）
         shell: pwsh
         run: |
-          # _win64.exe 是 GUI 子系统进程：直接调用 pwsh 不会等待，import/export
-          # 会并跑互踩。Start-Process -Wait 强制逐条等完并检查退出码。
-          function Invoke-Godot([string[]]$Args) {
-            $p = Start-Process -FilePath "tools-bin\godot.exe" -ArgumentList $Args `
-              -NoNewWindow -Wait -PassThru
-            if ($p.ExitCode -ne 0) { Write-Host "godot failed: $($Args -join ' ')"; exit $p.ExitCode }
-          }
-          Invoke-Godot @("--headless", "--path", ".", "--import")
+          # _win64.exe 是 GUI 子系统进程：pwsh 直接调用不会等待（import/export
+          # 并跑互踩），Start-Process -Wait 又会死锁。cmd /c + 重定向是最稳的
+          # 等待方式——管道迫使 cmd 等到进程退出。
+          cmd /c "tools-bin\godot.exe --headless --path . --import > godot_import.log 2>&1"
+          if ($LASTEXITCODE -ne 0) { Get-Content godot_import.log; exit $LASTEXITCODE }
           New-Item -ItemType Directory -Force -Path build | Out-Null
-          Invoke-Godot @("--headless", "--path", ".", "--export-release", "Windows", "build\WordMagic.exe")
+          cmd /c "tools-bin\godot.exe --headless --path . --export-release Windows build\WordMagic.exe > godot_export.log 2>&1"
+          Get-Content godot_export.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if (-not (Test-Path "build\WordMagic.exe")) { Write-Host "export produced no exe"; exit 1 }
           Compress-Archive -Path build\WordMagic.exe -DestinationPath build\WordMagic-Windows-x64.zip -Force
       - uses: actions/upload-artifact@v4
