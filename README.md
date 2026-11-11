@@ -10,7 +10,7 @@
 
 垂直切片完整可玩：**标题 → 森林探索 → 文字施法 → 战斗 → 史莱姆王 Boss → 符文解谜 →
 存读档 → 世界记忆跨重启**。32 套自动化测试全绿（713 断言）。详见
-`docs/development-roadmap.md`。
+`docs/development-roadmap.md` 与 `docs/balance.md`。
 
 ## 快速开始
 

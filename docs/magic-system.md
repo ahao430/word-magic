@@ -10,8 +10,8 @@
 | Text Normalization | ✅ | `text_normalizer.gd`：去空白/标点、全角折叠、小写、CJK 保留 |
 | **Exact Cache** | ✅ | `spell_cache.gd`：原样文本 → draft，跨冒险持久 |
 | **Normalized Cache** | ✅ | 同上：规范化键 → {raw, draft}，同一咒语的标点/空格变体复用解析 |
-| Local Spell Rules | ✅ | `local_spell_registry.gd`：7 条本地咒语习语 |
-| Semantic Cache | ❌ | 等 Embedding Provider（可选配置项已预留） |
+| Local Spell Rules | ✅ | `local_spell_registry.gd`：11 条本地咒语习语 |
+| Semantic Cache | ✅ | EmbeddingProvider（OpenAI 兼容 /embeddings）+ 余弦 ≥0.86 复用；命中仍过验证与会话唯一门；填 embedding_model 即启用 |
 | AI Spell Parser | ✅ | `scripts/ai/spell_parser.gd`（OpenAI 兼容；经 `chat_provider.gd`，见下） |
 | Schema/Skill Validation | ✅ | `spell_validator.gd`：白名单 + 数值钳制 |
 | Balance Calculator | ✅ | `spell_balance.gd`：游戏侧统一算价 |
@@ -20,7 +20,7 @@
 | Spell Executor | ✅ | `spell_executor.gd`（**白名单 8 形状全部实装**：projectile / explosion / field / tornado / area / beam / shield / summon） |
 
 `magic_facade.cast()` 按上表顺序编排，返回额外带 `source` 诊断字段
-（`registry` / `cache_exact` / `cache_normalized`），UI 不消费。
+（`registry` / `cache_exact` / `cache_normalized` / `cache_semantic` / `ai`），UI 不消费。
 
 ## 缓存语义（信任规则）
 
