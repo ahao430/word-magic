@@ -198,6 +198,11 @@ func apply_layout_seed(new_seed: int) -> void:
 	layout_seed = new_seed
 	var n := 0
 	for child in props.get_children():
+		# The player was reparented into props and must survive every
+		# reseed (a load with a different seed would otherwise erase
+		# them — caught by the playthrough acceptance run).
+		if child.name == "Player":
+			continue
 		child.name = "ZzDead%d" % n
 		n += 1
 		child.queue_free()

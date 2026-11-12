@@ -32,7 +32,7 @@
 | UI | `scripts/ui/` | 标题页、暂停面板（+**旅程页**）、法术图鉴（滚动/筛选）、存档槽面板、对话框、HUD 血魔条 + Boss 血条 + 天气指示 |
 | 工具链 | `tools/dev/` `.github/` | run_tests.sh 一键回归（看门狗/汇总）+ 提交前检查表 + CI（测试 + 双平台导出 + 滚动 Release） |
 
-## 测试索引（39 套 / 839+ 断言）
+## 测试索引（40 套 / 857+ 断言）
 
 `tools/dev/run_tests.sh` 一键全量（发现 + 看门狗 + 汇总）；单套
 `godot --headless --path . -s res://tests/<name>_test.gd`：
@@ -43,7 +43,7 @@ player_animation · magic_pipeline · slime_sprites · combat · spell_session �
 spell_cache(35) · shapes(28) · puzzle · save · sfx · water_anim · ambient ·
 boss(31) · world_memory(24) · spellbook · flow(14) · camera(7) · settings(18) ·
 slots(18) · **ai_provider(34)** · **mouse_combat(20)** · **voice(19)** ·
-**weather(50)** · **balance(30)** · **regions(26)** · **npc(27)** · **seed(15)** · **fly(10)** · **expedition(13)** · **journey(16)** · **achievements(10)**
+**weather(50)** · **balance(30)** · **regions(26)** · **npc(27)** · **seed(15)** · **fly(10)** · **expedition(13)** · **journey(16)** · **achievements(10)** · **playthrough(18)**
 
 （加粗为 AI/语音/天气/平衡阶段新增；括号内为断言数。）
 测试隔离：`tests/test_isolation.gd` 统一 stash/unstash `user://` 下真实文件
@@ -84,7 +84,8 @@ slots(18) · **ai_provider(34)** · **mouse_combat(20)** · **voice(19)** ·
 | 08eeb74 | 沼泽蝇敌种：飞行无视畏水/绕飞/风漂/轻身推飞 |
 | abb10c4 | 远征雏形：深沼回响（可重复计时挑战 + 永久最佳纪录） |
 | 88fab9a | 旅程统计页：五项终身计数 + 世界记忆时间线 |
-| （本轮） | 成就系统：九枚成就（纯数据定义 + 纯函数判定 + 永久点亮） |
+| 17fca77 | 成就系统：九枚成就（纯数据定义 + 纯函数判定 + 永久点亮） |
+| （本轮） | 通关验收套件：全旅程 e2e（并修复读档 reseed 抹除玩家的真 bug） |
 
 ## 已知限制与待办
 

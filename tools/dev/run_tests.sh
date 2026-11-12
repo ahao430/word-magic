@@ -86,7 +86,7 @@ for t in $SUITES; do
 		# The watchdog killed it: the suite hung (SCRIPT ERROR mid-await).
 		TIMEOUTS=$((TIMEOUTS + 1)); TAG="HANG"
 		FAILED+=("$t (hang)")
-	elif grep -q "ALL PASS" "$LOG"; then
+	elif grep -qE "ALL PASS|PLAYTHROUGH OK" "$LOG"; then
 		PASS=$((PASS + 1)); TAG="OK "
 		if [ "$CODE" -ne 0 ]; then TAG="OK?"; fi
 	else

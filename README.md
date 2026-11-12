@@ -9,7 +9,7 @@
 ## 当前状态（2026-11-11）
 
 垂直切片完整可玩：**标题 → 森林探索 → 文字施法 → 战斗 → 史莱姆王 Boss → 符文解谜 →
-存读档 → 世界记忆跨重启**。39 套自动化测试全绿（839 断言）。详见
+存读档 → 世界记忆跨重启**。40 套自动化测试全绿（857 断言）。详见
 `docs/development-roadmap.md` 与 `docs/balance.md`。
 
 ## 快速开始
@@ -23,7 +23,7 @@ godot --headless --path . --import
 # 运行游戏（从标题页开始）
 godot --path .
 
-# 一键全量回归（39 套 / 839 断言，~2.5 分钟；--filter 可跑子集）
+# 一键全量回归（40 套 / 857 断言（含全流程通关验收），~2.5 分钟；--filter 可跑子集）
 tools/dev/run_tests.sh
 
 # 游戏内截图验证（写 /tmp/wm_*.png；不要加 --headless）
@@ -52,6 +52,12 @@ main 自动跑全量测试 + 导出 macOS/Windows，并发布到**滚动 Release
   app_userdata/` 不受影响）；Windows 是内嵌 pck 的单文件 exe，改名覆盖即可
 - 打 `v*` tag 会额外发正式版 Release（tag 即版本号，标记为 latest）
 - 未签名/ad-hoc 签名：macOS 首次打开需右键→打开（无开发者证书的已知代价）
+
+## 通关验收
+
+`tests/playthrough_test.gd` 是**发布门**：一条 headless 旅程跑完整循环
+（随机种子 → 12 咒全施 → 符文渡口 → 湿地/灵泉 → 精英/委托/传授 → 远征 →
+弑王 → 存读档往返 → 成就盘点 ≥7 枚），任何一步失败即 `PLAYTHROUGH OK` 不亮。
 
 ## 成就
 

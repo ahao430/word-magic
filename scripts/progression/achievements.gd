@@ -56,7 +56,9 @@ static func evaluate(snapshot: Dictionary, candidates: Array) -> Array:
 				if events.has(str(def["event"])):
 					out.append(id)
 			"expedition_best":
-				if best > 0.0 and best <= float(def["at"]):
+				# >= 0.0: a same-frame headless kill is a legal (perfect)
+				# run; real players never hit zero but tests may.
+				if best >= 0.0 and best <= float(def["at"]):
 					out.append(id)
 	return out
 
