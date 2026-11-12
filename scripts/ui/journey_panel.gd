@@ -8,6 +8,7 @@ signal closed
 
 var _stats_rows: VBoxContainer
 var _timeline_rows: VBoxContainer
+var _achieve_rows: VBoxContainer
 
 
 func _init() -> void:
@@ -51,6 +52,16 @@ func _init() -> void:
 	_timeline_rows = VBoxContainer.new()
 	rows.add_child(_timeline_rows)
 
+	var achieve_title := Label.new()
+	achieve_title.text = "成就"
+	achieve_title.add_theme_font_size_override("font_size", 16)
+	achieve_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	achieve_title.modulate = Color(1, 1, 1, 0.75)
+	rows.add_child(achieve_title)
+
+	_achieve_rows = VBoxContainer.new()
+	rows.add_child(_achieve_rows)
+
 	var hint := Label.new()
 	hint.text = "Esc 返回暂停菜单"
 	hint.modulate = Color(1, 1, 1, 0.55)
@@ -78,6 +89,8 @@ func _refresh() -> void:
 	for child in _stats_rows.get_children():
 		child.free()
 	for child in _timeline_rows.get_children():
+		child.free()
+	for child in _achieve_rows.get_children():
 		child.free()
 
 	# --- Lifetime counters ---
@@ -123,6 +136,16 @@ func _refresh() -> void:
 			_timeline_rows.add_child(line)
 	if _timeline_rows.get_child_count() == 0:
 		var empty := Label.new()
-		empty.text = "（世界还记得 nothing——你的故事才刚开始）"
+		empty.text = "（世界还空白着——你的故事才刚开始）"
 		empty.modulate = Color(1, 1, 1, 0.6)
 		_timeline_rows.add_child(empty)
+
+	# --- Achievements: unlocked shine, locked stay dim ---
+	for def in Achievements.DEFS:
+		var row := Label.new()
+		var unlocked: bool = (Achievements.unlocked_ids() as Array).has(str(def["id"]))
+		row.text = "%s %s" % ["✧" if unlocked else "◇", def["name"]]
+		row.add_theme_color_override("font_color",
+				Color(1.0, 0.92, 0.55) if unlocked else Color(1, 1, 1, 0.35))
+		row.tooltip_text = str(def["desc"])
+		_achieve_rows.add_child(row)

@@ -79,7 +79,22 @@ func _ready() -> void:
 		_do_load(GameManager.pending_load_slot)
 
 
-func _process(_delta: float) -> void:
+var _achieve_acc := 0.0
+
+
+## Achievement watch: poll the permanent tier twice a second; each new
+## unlock toasts on its own (queue through successive polls).
+func _poll_achievements(delta: float) -> void:
+	_achieve_acc += delta
+	if _achieve_acc < 0.5:
+		return
+	_achieve_acc = 0.0
+	for id in Achievements.poll_new():
+		var def: Dictionary = Achievements.def_by_id(id)
+		_toast("成就解锁：%s — %s" % [def.get("name", id), def.get("desc", "")], true)
+
+
+func _process(delta: float) -> void:
 	mana_bar.value = player.mana
 	hp_bar.value = player.hp
 	mana_label.text = "魔力 %d/%d" % [roundi(player.mana), roundi(player.mana_max)]
@@ -94,6 +109,7 @@ func _process(_delta: float) -> void:
 		slot_panel.open_load_mode()
 	if Input.is_action_just_pressed("reset_world"):
 		_do_world_reset()
+	_poll_achievements(delta)
 	if Input.is_action_just_pressed("interact"):
 		_handle_interact()
 	if Input.is_action_pressed("attack"):
