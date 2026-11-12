@@ -10,6 +10,7 @@ const TEX := "res://assets/sprites/npc/keeper.png"
 
 const ACTION_ACCEPT := "accept_quest"
 const ACTION_TURN_IN := "turn_in_quest"
+const ACTION_EXPEDITION := "accept_expedition"
 
 signal quest_accepted
 signal quest_turned_in
@@ -58,6 +59,19 @@ func confirm_action(player: Node2D, action: String) -> Dictionary:
 			WorldMemory.record_and_persist(WorldMemory.EVENT_QUEST_TAKEN, {"quest": "swamp_heart"})
 			quest_accepted.emit()
 			return {"ok": true, "message": "已接受委托：取回沼泽之心（深沼在湿地东北）"}
+		ACTION_EXPEDITION:
+			if not WorldMemory.has_event(WorldMemory.EVENT_QUEST_DONE):
+				return {"ok": false, "message": "先完成取心的委托，再谈远征"}
+			var world := _owning_world()
+			if world == null:
+				return {"ok": false, "message": "……"}
+			if world.get("expedition_active"):
+				return {"ok": false, "message": "回响已在深沼等待——去吧"}
+			world.call("spawn_elite_echo")
+			world.set("expedition_active", true)
+			world.set("_expedition_time", 0.0)
+			quest_accepted.emit()
+			return {"ok": true, "message": "远征开始：深沼的回响已经苏醒（计时中）"}
 		ACTION_TURN_IN:
 			if WorldMemory.has_event(WorldMemory.EVENT_QUEST_DONE):
 				return {"ok": false, "message": "这份谢意早已送出"}
@@ -69,6 +83,14 @@ func confirm_action(player: Node2D, action: String) -> Dictionary:
 			quest_turned_in.emit()
 			return {"ok": true, "message": "守林人的祝福：魔力回复 +25%"}
 	return {"ok": false, "message": "……"}
+
+
+## The world node this keeper lives in (props -> world).
+func _owning_world() -> Node2D:
+	var node := get_parent()
+	while node != null and not node.has_method("spawn_elite_echo"):
+		node = node.get_parent()
+	return node
 
 
 ## Pure line builder: the keeper's memory of the world. Lines change
@@ -87,7 +109,8 @@ static func build_lines(state: Dictionary) -> Dictionary:
 	# The quest thread weaves in last so its page is always actionable.
 	if state.get("quest_done", false):
 		out.append("愿言语与你同行——你的咒语声，如今比初见时清晰多了。")
-		return {"lines": out}
+		out.append("胆子够大的话，再回深沼去——那颗心的回响会考验你。计时开始后，越快越好。（E 接受远征 / Esc 再想想）")
+		return {"lines": out, "action": ACTION_EXPEDITION}
 	if state.get("elite_dead", false):
 		if state.get("quest_taken", false):
 			out.append("你真的取回了它……这份祝福收下吧——再赠你一句咒语：「激流贯射」。愿魔力如泉涌。（E 交付委托）")

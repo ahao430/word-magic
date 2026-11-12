@@ -104,6 +104,9 @@ signal region_discovered(region_name: String)
 ## Fired when the wetland elite dies (main grants the swamp heart).
 signal elite_died
 
+## Fired when an expedition echo falls (seconds, best, improved).
+signal expedition_completed(seconds: float, best: float, improved: bool)
+
 
 @onready var ground: TileMapLayer = $GroundLayer
 @onready var props: Node2D = $Props
@@ -117,6 +120,12 @@ var wetland_discovered := false
 
 ## Region poll accumulator: bias + discovery checks run at 2 Hz.
 var _region_acc := 0.0
+
+## 远征 (expedition) state: in-memory on purpose — a restart aborts the
+## run and the keeper simply re-offers. Best times live in the
+## permanent tier; the run itself does not.
+var expedition_active := false
+var _expedition_time := 0.0
 
 ## Open-water shimmer: the 4 surface variants cycle slowly; per-cell
 ## phase offset keeps the swap from looking like a global strobe.
@@ -366,6 +375,8 @@ func _process(delta: float) -> void:
 	_sway_time += delta
 	_sway_trees()
 	_poll_region(delta)
+	if expedition_active:
+		_expedition_time += delta
 	_water_anim_acc += delta
 	if _water_anim_acc < WATER_CYCLE_TIME:
 		return
@@ -666,6 +677,8 @@ func _scatter_wetland_flies(water_cell: Dictionary) -> void:
 
 
 func _on_elite_died() -> void:
+	# Only the ORIGINAL elite lands here (echoes connect elsewhere), so
+	# the heart is granted exactly once and echoes never stack it.
 	WorldMemory.record_and_persist(WorldMemory.EVENT_ELITE)
 	elite_died.emit()
 
@@ -709,6 +722,35 @@ func _spawn_gate() -> void:
 		sprite.position = Vector2(0, -22)
 		pillar.add_child(sprite)
 		props.add_child(pillar)
+
+
+## 远征 echo: a fresh guardian of the swamp heart springs up at the
+## throne cell for the repeatable challenge.
+func spawn_elite_echo() -> void:
+	var echo: CharacterBody2D = load("res://scenes/enemies/slime.tscn").instantiate()
+	echo.name = "SlimeEliteEcho"
+	echo.position = Vector2(ELITE_CELL) * 32.0 + Vector2(16.0, 24.0)
+	echo.set("hp", 60.0)
+	echo.scale = Vector2(1.3, 1.3)
+	echo.get_node("SlimeSprite").modulate = Color(0.75, 0.6, 0.9)
+	props.add_child(echo)
+	# Separate handler: echoes settle the run, the ORIGINAL elite's
+	# death grants the heart — never the reverse.
+	echo.connect("died", _on_echo_died)
+
+
+func _on_echo_died() -> void:
+	expedition_active = false
+	var best := -1.0
+	var prior: Dictionary = WorldMemory.get_event(WorldMemory.EVENT_EXPEDITION)
+	if not prior.is_empty():
+		best = float(prior.get("best_seconds", -1.0))
+	var improved := best < 0.0 or _expedition_time < best
+	if improved:
+		WorldMemory.record_and_persist(WorldMemory.EVENT_EXPEDITION,
+				{"best_seconds": _expedition_time})
+		best = _expedition_time
+	expedition_completed.emit(_expedition_time, best, improved)
 
 
 ## The Keeper: first NPC, solid, standing by the gate.

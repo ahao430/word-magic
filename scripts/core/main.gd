@@ -56,6 +56,9 @@ func _ready() -> void:
 	$World.elite_died.connect(func() -> void:
 		player.apply_swamp_heart()
 		_toast("拾得沼泽之心：生命上限 +10", true))
+	$World.expedition_completed.connect(func(seconds: float, best: float, improved: bool) -> void:
+		var suffix := "（新纪录！）" if improved else "（最佳 %.1f 秒）" % best
+		_toast("远征完成：%.1f 秒%s" % [seconds, suffix], true))
 	# Permanent growth replay (world memory owns the facts; the player
 	# node derives its stats from them each build).
 	if WorldMemory.has_event(WorldMemory.EVENT_ELITE):

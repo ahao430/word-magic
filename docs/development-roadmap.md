@@ -13,7 +13,7 @@
 | 4 环境互动与机关 | ✅ | 符文石解谜（规则验证）→ 渡口重建 |
 | 5 AI 缓存和语音 | ✅ | Exact/Normalized/**Semantic** 三层缓存 + AI 解析（live e2e 通过）+ 语音输入（PTT + 确认流 + 口令门控）；语音 ASR 与语义 Embedding 等所有者配置端点即启用 |
 | 6 世界记忆和存档 | ✅ | 三层模型（世界记忆/会话/缓存）+ **多槽位管理 UI（3 槽 + 元信息卡 + 删除）** + 设置持久化 |
-| 7 开放世界和成长 | ◐ | 迷雾湿地（区域偏置/界门/精英/灵泉/守林人 NPC + 首个委托与传授咒语）；**程序化世界种子 ✅**（新游戏随机布局、存档往返、兴趣点恒定）；更多 NPC、成长曲线未开始 |
+| 7 开放世界和成长 | ◐ | 迷雾湿地（区域/界门/精英/灵泉/守林人 + 委托 + 传授咒语）；**程序化世界种子 ✅**；**远征雏形 ✅**（可重复计时挑战 + 最佳纪录）；更多 NPC、成长曲线未开始 |
 | 8 正式版本 | ◐ | **导出打包 ✅**（本地双平台 + CI 滚动 Release）；平衡守卫 ✅；发布打磨进行中 |
 
 ## 系统清单
@@ -32,7 +32,7 @@
 | UI | `scripts/ui/` | 标题页、暂停面板、法术图鉴（滚动/筛选）、存档槽面板、HUD 血魔条 + Boss 血条 + 天气指示 |
 | 工具链 | `tools/dev/` `.github/` | run_tests.sh 一键回归（看门狗/汇总）+ 提交前检查表 + CI（测试 + 双平台导出 + 滚动 Release） |
 
-## 测试索引（36 套 / 797+ 断言）
+## 测试索引（37 套 / 810+ 断言）
 
 `tools/dev/run_tests.sh` 一键全量（发现 + 看门狗 + 汇总）；单套
 `godot --headless --path . -s res://tests/<name>_test.gd`：
@@ -43,7 +43,7 @@ player_animation · magic_pipeline · slime_sprites · combat · spell_session �
 spell_cache(35) · shapes(28) · puzzle · save · sfx · water_anim · ambient ·
 boss(31) · world_memory(24) · spellbook · flow(14) · camera(7) · settings(18) ·
 slots(18) · **ai_provider(34)** · **mouse_combat(20)** · **voice(19)** ·
-**weather(50)** · **balance(30)** · **regions(26)** · **npc(27)** · **seed(15)** · **fly(10)**
+**weather(50)** · **balance(30)** · **regions(26)** · **npc(27)** · **seed(15)** · **fly(10)** · **expedition(13)**
 
 （加粗为 AI/语音/天气/平衡阶段新增；括号内为断言数。）
 测试隔离：`tests/test_isolation.gd` 统一 stash/unstash `user://` 下真实文件
@@ -81,7 +81,8 @@ slots(18) · **ai_provider(34)** · **mouse_combat(20)** · **voice(19)** ·
 | 906d1cf | 首个委托：取回沼泽之心（E 确认/Esc 暂缓 + 永久祝福奖励） |
 | 1481c55 | 委托奖励法术化：解锁层 + 传授「激流贯射」 |
 | af52c88 | 程序化世界种子：单一 layout_seed 驱动布局、新游戏随机、存档往返 |
-| （本轮） | 沼泽蝇敌种：飞行无视畏水/绕飞/风漂/轻身推飞 |
+| 08eeb74 | 沼泽蝇敌种：飞行无视畏水/绕飞/风漂/轻身推飞 |
+| （本轮） | 远征雏形：深沼回响（可重复计时挑战 + 永久最佳纪录） |
 
 ## 已知限制与待办
 

@@ -40,8 +40,9 @@ func _run() -> void:
 			and ready["lines"][3].contains("E 交付"),
 			"elite dead + quest active: turn-in page")
 	var done: Dictionary = keeper_script.build_lines({"quest_done": true})
-	_expect(not done.has("action") and done["lines"][3].contains("清晰多了"),
-			"quest done: thanks line, no action")
+	_expect(done["lines"][3].contains("清晰多了")
+			and done.get("action", "") == keeper_script.ACTION_EXPEDITION,
+			"quest done: thanks line, then the expedition offer")
 	var refused: Dictionary = keeper_script.build_lines({"elite_dead": true})
 	_expect(not refused.has("action") and refused["lines"][3].contains("可惜了"),
 			"elite dead without the quest: a regret line, no action")

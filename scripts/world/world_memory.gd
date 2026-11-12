@@ -19,6 +19,7 @@ const EVENT_ELITE := "elite_slime_defeated"
 const EVENT_SPRING := "swamp_spring_blessed"
 const EVENT_QUEST_TAKEN := "quest_swamp_heart_taken"
 const EVENT_QUEST_DONE := "quest_swamp_heart_done"
+const EVENT_EXPEDITION := "expedition_swamp_echo"
 
 static var _events: Dictionary = {}
 static var _loaded := false
