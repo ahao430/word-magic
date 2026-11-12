@@ -22,6 +22,7 @@ const EVENT_QUEST_DONE := "quest_swamp_heart_done"
 const EVENT_EXPEDITION := "expedition_swamp_echo"
 
 static var _events: Dictionary = {}
+static var _counters: Dictionary = {}
 static var _loaded := false
 
 
@@ -30,6 +31,7 @@ static var _loaded := false
 ## hermetically; it never touches the file.
 static func reset() -> void:
 	_events = {}
+	_counters = {}
 	_loaded = true
 
 
@@ -66,6 +68,29 @@ static func get_event(event_id: String) -> Dictionary:
 	return _events.get(event_id, {})
 
 
+## --- Lifetime counters (the journey page reads these) ---
+
+## Bump a named counter and flush immediately (a lost kill is a lost
+## memory).
+static func bump_counter(key: String, by := 1) -> void:
+	_ensure_loaded()
+	_counters[key] = int(_counters.get(key, 0)) + by
+	var result: Dictionary = persist()
+	if not result["ok"]:
+		push_warning("world memory persist failed: " + result["error"])
+
+
+static func counter(key: String) -> int:
+	_ensure_loaded()
+	return int(_counters.get(key, 0))
+
+
+## Counters snapshot for tests / migrations.
+static func capture_counters() -> Dictionary:
+	_ensure_loaded()
+	return _counters.duplicate(true)
+
+
 ## Full snapshot for embedding in tests / future migrations.
 static func capture() -> Dictionary:
 	_ensure_loaded()
@@ -81,7 +106,7 @@ static func apply(events: Dictionary) -> void:
 
 static func persist() -> Dictionary:
 	_ensure_loaded()
-	return SaveManager.save_world_memory(_events)
+	return SaveManager.save_world_memory(_events, _counters)
 
 
 ## Dev reset (F8): forget everything permanently and rebuild the world.
@@ -98,6 +123,7 @@ static func _ensure_loaded() -> void:
 	var result: Dictionary = SaveManager.load_world_memory()
 	if result["ok"]:
 		apply(result["events"])
+		_counters = (result.get("counters", {}) as Dictionary).duplicate(true)
 	else:
 		# A missing file is a fresh world (handled as ok above); a
 		# corrupt one warns and starts empty — gameplay must never block

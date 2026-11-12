@@ -29,10 +29,10 @@
 | 世界 | `scripts/world/` | 种子确定性重建 + 增量重放；河流/瀑布动画/树摇/BGM |
 | 存档 | `scripts/save/` | 三层：世界记忆（永久）/ 会话槽（3 槽管理 UI）/ 法术缓存；全部原子写 + 版本校验 + 损坏安全 |
 | 音频 | `scripts/audio/` | 13 条程序化 SFX（元素化施法/受击/落地）+ 24s 循环 BGM；Music/SFX 总线 + 设置面板实时调节 |
-| UI | `scripts/ui/` | 标题页、暂停面板、法术图鉴（滚动/筛选）、存档槽面板、HUD 血魔条 + Boss 血条 + 天气指示 |
+| UI | `scripts/ui/` | 标题页、暂停面板（+**旅程页**）、法术图鉴（滚动/筛选）、存档槽面板、对话框、HUD 血魔条 + Boss 血条 + 天气指示 |
 | 工具链 | `tools/dev/` `.github/` | run_tests.sh 一键回归（看门狗/汇总）+ 提交前检查表 + CI（测试 + 双平台导出 + 滚动 Release） |
 
-## 测试索引（37 套 / 810+ 断言）
+## 测试索引（38 套 / 826+ 断言）
 
 `tools/dev/run_tests.sh` 一键全量（发现 + 看门狗 + 汇总）；单套
 `godot --headless --path . -s res://tests/<name>_test.gd`：
@@ -43,7 +43,7 @@ player_animation · magic_pipeline · slime_sprites · combat · spell_session �
 spell_cache(35) · shapes(28) · puzzle · save · sfx · water_anim · ambient ·
 boss(31) · world_memory(24) · spellbook · flow(14) · camera(7) · settings(18) ·
 slots(18) · **ai_provider(34)** · **mouse_combat(20)** · **voice(19)** ·
-**weather(50)** · **balance(30)** · **regions(26)** · **npc(27)** · **seed(15)** · **fly(10)** · **expedition(13)**
+**weather(50)** · **balance(30)** · **regions(26)** · **npc(27)** · **seed(15)** · **fly(10)** · **expedition(13)** · **journey(16)**
 
 （加粗为 AI/语音/天气/平衡阶段新增；括号内为断言数。）
 测试隔离：`tests/test_isolation.gd` 统一 stash/unstash `user://` 下真实文件
@@ -82,7 +82,8 @@ slots(18) · **ai_provider(34)** · **mouse_combat(20)** · **voice(19)** ·
 | 1481c55 | 委托奖励法术化：解锁层 + 传授「激流贯射」 |
 | af52c88 | 程序化世界种子：单一 layout_seed 驱动布局、新游戏随机、存档往返 |
 | 08eeb74 | 沼泽蝇敌种：飞行无视畏水/绕飞/风漂/轻身推飞 |
-| （本轮） | 远征雏形：深沼回响（可重复计时挑战 + 永久最佳纪录） |
+| abb10c4 | 远征雏形：深沼回响（可重复计时挑战 + 永久最佳纪录） |
+| （本轮） | 旅程统计页：五项终身计数 + 世界记忆时间线 |
 
 ## 已知限制与待办
 

@@ -102,6 +102,7 @@ func take_damage(amount: float, from_dir: Vector2) -> void:
 
 
 func _respawn() -> void:
+	WorldMemory.bump_counter("deaths")
 	hp = hp_max
 	mana = mana_max
 	_invuln_timer = INVULN_TIME

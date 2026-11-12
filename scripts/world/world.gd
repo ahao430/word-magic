@@ -619,6 +619,7 @@ func _scatter_slimes(dirt_cell: Dictionary, water_cell: Dictionary) -> void:
 				slime.name = "Slime_%d_%d" % [cell.x, cell.y]
 				slime.position = Vector2(cell) * 32.0 + Vector2(16.0, 24.0)
 				props.add_child(slime)
+				slime.connect("died", _on_slime_died)
 				placed += 1
 
 
@@ -645,6 +646,7 @@ func _scatter_wetland_slimes(water_cell: Dictionary) -> void:
 				slime.name = "Slime_%d_%d" % [cell.x, cell.y]
 				slime.position = Vector2(cell) * 32.0 + Vector2(16.0, 24.0)
 				props.add_child(slime)
+				slime.connect("died", _on_slime_died)
 				placed += 1
 	var elite: CharacterBody2D = load("res://scenes/enemies/slime.tscn").instantiate()
 	elite.name = "SlimeElite_%d_%d" % [ELITE_CELL.x, ELITE_CELL.y]
@@ -673,6 +675,7 @@ func _scatter_wetland_flies(water_cell: Dictionary) -> void:
 			fly.name = "SwampFly_%d_%d" % [cell.x, cell.y]
 			fly.position = Vector2(cell) * 32.0 + Vector2(16.0, 16.0)
 			props.add_child(fly)
+			fly.connect("died", _on_fly_died)
 			placed += 1
 
 
@@ -724,6 +727,16 @@ func _spawn_gate() -> void:
 		props.add_child(pillar)
 
 
+## Ground slime fell: one for the journey tally.
+func _on_slime_died() -> void:
+	WorldMemory.bump_counter("slain_slimes")
+
+
+## A swamp fly dropped: its own line on the journey page.
+func _on_fly_died() -> void:
+	WorldMemory.bump_counter("slain_flies")
+
+
 ## 远征 echo: a fresh guardian of the swamp heart springs up at the
 ## throne cell for the repeatable challenge.
 func spawn_elite_echo() -> void:
@@ -740,6 +753,7 @@ func spawn_elite_echo() -> void:
 
 
 func _on_echo_died() -> void:
+	WorldMemory.bump_counter("expedition_runs")
 	expedition_active = false
 	var best := -1.0
 	var prior: Dictionary = WorldMemory.get_event(WorldMemory.EVENT_EXPEDITION)

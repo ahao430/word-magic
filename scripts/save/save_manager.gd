@@ -98,8 +98,9 @@ const WORLD_MEMORY_VERSION := 1
 
 
 ## Returns {"ok": bool, "error": String}. Atomic write like save_game.
-static func save_world_memory(events: Dictionary) -> Dictionary:
-	var payload := {"version": WORLD_MEMORY_VERSION, "events": events}
+static func save_world_memory(events: Dictionary, counters: Dictionary = {}) -> Dictionary:
+	var payload := {"version": WORLD_MEMORY_VERSION, "events": events,
+			"counters": counters}
 	var tmp := WORLD_MEMORY_PATH + ".tmp"
 	var file := FileAccess.open(tmp, FileAccess.WRITE)
 	if file == null:
@@ -116,18 +117,19 @@ static func save_world_memory(events: Dictionary) -> Dictionary:
 ## file → ok with empty events (fresh world); damaged file → refused.
 static func load_world_memory() -> Dictionary:
 	if not FileAccess.file_exists(WORLD_MEMORY_PATH):
-		return {"ok": true, "events": {}, "error": ""}
+		return {"ok": true, "events": {}, "counters": {}, "error": ""}
 	var file := FileAccess.open(WORLD_MEMORY_PATH, FileAccess.READ)
 	if file == null:
-		return {"ok": false, "events": {}, "error": "cannot open"}
+		return {"ok": false, "events": {}, "counters": {}, "error": "cannot open"}
 	var parsed = JSON.parse_string(file.get_as_text())
 	file.close()
 	if parsed == null or not parsed is Dictionary:
-		return {"ok": false, "events": {}, "error": "corrupted world memory"}
+		return {"ok": false, "events": {}, "counters": {}, "error": "corrupted world memory"}
 	var version: int = int(parsed.get("version", 0))
 	if version != WORLD_MEMORY_VERSION:
-		return {"ok": false, "events": {}, "error": "unsupported version %d" % version}
-	return {"ok": true, "events": parsed.get("events", {}), "error": ""}
+		return {"ok": false, "events": {}, "counters": {}, "error": "unsupported version %d" % version}
+	return {"ok": true, "events": parsed.get("events", {}),
+			"counters": parsed.get("counters", {}), "error": ""}
 
 
 ## Dev reset: forget permanent progress. Returns {"ok", "error"}.

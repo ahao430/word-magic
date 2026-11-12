@@ -370,6 +370,7 @@ func _on_cast_submitted(text: String) -> void:
 	cast_result.text = result["message"]
 	if result["ok"]:
 		cast_result.add_theme_color_override("font_color", Color(0.7, 1.0, 0.7))
+		WorldMemory.bump_counter("casts_ok")
 		GameManager.log_info("cast '%s' ok, cost %d" % [text, result["cost"]])
 		player.last_spell = result["spell"]
 		_add_codex_row(result["spell"])
