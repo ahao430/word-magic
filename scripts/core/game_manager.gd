@@ -12,6 +12,14 @@ var state: GameState = GameState.BOOT
 ## _ready and loads the chosen slot instead of a fresh adventure.
 var pending_load_session := false
 var pending_load_slot := "slot_01"
+## Fresh-adventure world seed (title randomizes; world consumes once).
+var pending_layout_seed := 0
+
+
+func consume_layout_seed() -> int:
+	var s := pending_layout_seed
+	pending_layout_seed = 0
+	return s
 
 
 func set_state(new_state: GameState) -> void:

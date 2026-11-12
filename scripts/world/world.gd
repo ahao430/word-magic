@@ -69,6 +69,30 @@ const SPRING_CELL := Vector2i(60, 22)
 ## The Forest Keeper stands beside the path, just west of the gate.
 const KEEPER_CELL := Vector2i(46, 15)
 
+## Procedural layout seed (AGENTS.md §11 "map Seed for procedural
+## reconstruction"). 0 = the historical legacy layout (byte-identical
+## to every world before seeds existed — old saves stay exact); any
+## other value drives terrain noise + prop/slime scatter. One seed
+## derives the whole layout; POIs (gate/spring/keeper/boss/rune/elite)
+## stay at their handcrafted cells on every seed.
+var layout_seed := 0
+
+const LEGACY_MACRO_SEED := 20261111
+const LEGACY_PROP_SEED := 20261112
+const LEGACY_SLIME_SEED := 777
+
+
+func _macro_seed() -> int:
+	return layout_seed if layout_seed != 0 else LEGACY_MACRO_SEED
+
+
+func _west_prop_seed() -> int:
+	return layout_seed + 1 if layout_seed != 0 else LEGACY_PROP_SEED
+
+
+func _slime_scatter_seed() -> int:
+	return layout_seed + 2 if layout_seed != 0 else LEGACY_SLIME_SEED
+
 ## Fired once when the boss dies (the boss_defeated flag + save tier
 ## record it; this notifies the HUD).
 signal boss_died
@@ -108,8 +132,22 @@ var _sway_targets: Array = []  # [sprite, phase] pairs, built lazily
 
 
 func _ready() -> void:
+	# Title's "new game" hands a fresh random seed over before the first
+	# build (loads restore their own seed later via apply_layout_seed).
+	var pending: int = GameManager.consume_layout_seed()
+	if pending != 0 and layout_seed == 0:
+		layout_seed = pending
+	_build_layout()
+	_build_walls()
+	_setup_weather()
+	_apply_world_memory()
+
+
+## Seed-to-world layout pass (re-entrant: apply_layout_seed wipes the
+## props layer and runs this again on the same node).
+func _build_layout() -> void:
 	var macro := FastNoiseLite.new()
-	macro.seed = 20261111
+	macro.seed = _macro_seed()
 	macro.frequency = 0.09
 	var detail := FastNoiseLite.new()
 	detail.seed = 99
@@ -120,15 +158,15 @@ func _ready() -> void:
 	for cell in wetland_pond_cells():
 		water_cell[cell] = true
 	_paint_ground(dirt_cell, water_cell, macro, detail)
-	# Two-pass prop scatter: the forest pass runs on the historical 48x32
-	# window with river-only water (byte-identical to the pre-wetland
-	# layout — old saves and tests keep their props), the wetland pass
-	# seeds its own sequence.
+	# Two-pass prop scatter: the legacy pass keeps its historical
+	# sequence (seed 0 worlds stay byte-identical); a custom seed shifts
+	# BOTH passes deterministically, and the wetland always rides its
+	# own sequence.
 	var west_placements: Array[Dictionary] = compute_placements(dirt_cell,
-			river_cells(), Vector2i(WETLAND_START, MAP_CELLS.y), PROP_SEED)
+			river_cells(), Vector2i(WETLAND_START, MAP_CELLS.y), _west_prop_seed())
 	var east_placements: Array[Dictionary] = compute_placements(dirt_cell,
 			wetland_pond_cells(), Vector2i(MAP_CELLS.x - WETLAND_START, MAP_CELLS.y),
-			PROP_SEED + 1, Vector2i(WETLAND_START, 0))
+			_west_prop_seed() + 1, Vector2i(WETLAND_START, 0))
 	_scatter_props(west_placements + east_placements)
 	_scatter_slimes(dirt_cell, water_cell)
 	_scatter_wetland_slimes(water_cell)
@@ -137,10 +175,25 @@ func _ready() -> void:
 	_spawn_gate()
 	_spawn_spring(water_cell)
 	_spawn_keeper()
-	_build_walls()
 	_setup_water_shimmer(water_cell)
 	_setup_waterfall(water_cell)
-	_setup_weather()
+
+
+## Swap to a different seed and rebuild the layout in place (session
+## load path). Dying children are renamed so re-spawned POI names stay
+## unique while the queue drains.
+func apply_layout_seed(new_seed: int) -> void:
+	if new_seed == layout_seed:
+		return
+	layout_seed = new_seed
+	var n := 0
+	for child in props.get_children():
+		child.name = "ZzDead%d" % n
+		n += 1
+		child.queue_free()
+	_sway_targets = []
+	_open_water = []
+	_build_layout()
 	_apply_world_memory()
 
 
@@ -480,7 +533,7 @@ func capture_state() -> Dictionary:
 	var weather_state: Dictionary = weather.capture_state() if weather != null else {}
 	return {"rune_state": rune_state, "ford_built": ford_built,
 			"alive_slimes": alive_slimes, "boss": _capture_boss(),
-			"weather": weather_state}
+			"weather": weather_state, "layout_seed": layout_seed}
 
 
 func _capture_boss() -> Dictionary:
@@ -498,6 +551,10 @@ func _capture_boss() -> Dictionary:
 ## re-awaken the rune silently, remove slimes that died before saving,
 ## and re-seat the boss (position/hp, or gone if he was defeated).
 func restore_state(data: Dictionary) -> void:
+	# Old saves carry no seed: 0 keeps the legacy layout untouched.
+	var saved_seed: int = int(data.get("layout_seed", 0))
+	if saved_seed != layout_seed:
+		apply_layout_seed(saved_seed)
 	if data.get("ford_built", false):
 		build_ford()
 		for child in props.get_children():
@@ -528,7 +585,7 @@ func restore_state(data: Dictionary) -> void:
 func _scatter_slimes(dirt_cell: Dictionary, water_cell: Dictionary) -> void:
 	## Deterministic slime scatter: land cells away from the spawn area.
 	var rng := RandomNumberGenerator.new()
-	rng.seed = SLIME_SEED
+	rng.seed = _slime_scatter_seed()
 	var placed := 0
 	for y in MAP_CELLS.y:
 		if placed >= SLIME_COUNT:

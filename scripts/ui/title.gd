@@ -47,4 +47,6 @@ func _on_slot_chosen(slot: String) -> void:
 
 func _on_start() -> void:
 	GameManager.pending_load_session = false
+	# Every fresh adventure rolls a fresh world (AGENTS.md §11 seed).
+	GameManager.pending_layout_seed = 100000 + (randi() % 900000)
 	get_tree().change_scene_to_file("res://scenes/main/main.tscn")
