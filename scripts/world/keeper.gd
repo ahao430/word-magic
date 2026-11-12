@@ -90,7 +90,7 @@ static func build_lines(state: Dictionary) -> Dictionary:
 		return {"lines": out}
 	if state.get("elite_dead", false):
 		if state.get("quest_taken", false):
-			out.append("你真的取回了它……这份祝福，收下吧。愿魔力如泉涌。（E 交付委托）")
+			out.append("你真的取回了它……这份祝福收下吧——再赠你一句咒语：「激流贯射」。愿魔力如泉涌。（E 交付委托）")
 			return {"lines": out, "action": ACTION_TURN_IN}
 		out.append("深沼的家伙倒了？它吞着的那颗心，本来该由我保管的。可惜了。")
 		out.append("愿言语与你同行。")

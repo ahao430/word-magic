@@ -99,6 +99,19 @@ func _run() -> void:
 			and absf(float(donor.get("mana_regen")) - 2.5) < 0.001,
 			"turn-in blesses the regen 2.0 -> 2.5 (%.2f)" % float(donor.get("mana_regen")))
 	donor.free()
+	# --- The taught idiom: locked, then unlocked by the quest ---
+	WorldMemory.reset()
+	_expect(LocalSpellRegistry.lookup("激流贯射").is_empty(),
+			"the taught spell is unknown before the quest")
+	WorldMemory.record_and_persist(WorldMemory.EVENT_QUEST_DONE)
+	var taught: Dictionary = LocalSpellRegistry.lookup("激流贯射")
+	_expect(not taught.is_empty() and taught["element"] == "water"
+			and SpellBalance.compute_cost(SpellValidator.validate(taught)["spell"]) == 32,
+			"quest completion unlocks 激流贯射 (cost 32)")
+	var ready2: Dictionary = keeper_script.build_lines(
+			{"quest_taken": true, "elite_dead": true})
+	_expect(ready2["lines"][3].contains("激流贯射"),
+			"the turn-in page teaches the incantation")
 
 	# --- End to end: main routes E, dialogue beats pause, quest commits ---
 	WorldMemory.reset()

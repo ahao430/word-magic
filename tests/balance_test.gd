@@ -59,6 +59,20 @@ func _run() -> void:
 				potential, ratio])
 		worst = maxf(worst, ratio)
 		_expect(ratio < 2.0, "%s under the 2.0 ceiling (%.2f)" % [name, ratio])
+	# --- Unlocked idioms join the table when their event fires ---
+	WorldMemory.record_and_persist(WorldMemory.EVENT_QUEST_DONE)
+	for name in LocalSpellRegistry.UNLOCKABLE:
+		var draft: Dictionary = LocalSpellRegistry.lookup(name)
+		var checked2: Dictionary = SpellValidator.validate(draft)
+		var cost3: int = SpellBalance.compute_cost(checked2["spell"])
+		var ticks3: int = maxi(SpellBalance.potential_ticks(checked2["spell"]), 1)
+		var potential3: float = float(checked2["spell"]["parameters"]["damage"]) * ticks3
+		print("%-8s cost %2d  dmg %2.0f x%d = %3.0f  ratio %.2f  (unlocked)"
+				% [name, cost3, float(checked2["spell"]["parameters"]["damage"]), ticks3,
+				potential3, potential3 / float(cost3)])
+		_expect(potential3 / float(cost3) < 2.0,
+				"unlocked %s under the 2.0 ceiling" % name)
+	WorldMemory.reset()
 	print("------------------------------------------")
 
 	# --- Max-clamped crafted spells: the ceiling holds at the extremes ---

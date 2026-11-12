@@ -77,5 +77,38 @@ const DRAFTS := {
 }
 
 
+## Quest-taught idioms: hidden until their world-memory event fires
+## (AGENTS §7.1 keeps them in the SAME local-rules layer — they pass
+## the identical validation/balance path once unlocked).
+## "event" mirrors WorldMemory.EVENT_QUEST_DONE ("quest_swamp_heart_done"):
+## the keeper teaches 「激流贯射」 when the swamp heart is returned.
+const UNLOCKABLE := {
+	"激流贯射": {
+		"event": "quest_swamp_heart_done",
+		"draft": {
+			"display": "激流贯射", "element": "water", "shape": "beam",
+			"mechanics": ["damage"],
+			"parameters": {"damage": 12, "radius": 80, "speed": 0, "duration": 1.2},
+		},
+	},
+}
+
+
 static func lookup(normalized_text: String) -> Dictionary:
-	return DRAFTS.get(normalized_text, {})
+	var draft: Dictionary = DRAFTS.get(normalized_text, {})
+	if not draft.is_empty():
+		return draft
+	var gated: Dictionary = UNLOCKABLE.get(normalized_text, {})
+	if not gated.is_empty() and WorldMemory.has_event(str(gated.get("event", ""))):
+		return (gated["draft"] as Dictionary).duplicate(true)
+	return {}
+
+
+## Registry view including unlocked idioms (diagnostics/tests).
+static func known_drafts() -> Array:
+	var all: Array = DRAFTS.values()
+	for key in UNLOCKABLE:
+		var gated: Dictionary = UNLOCKABLE[key]
+		if WorldMemory.has_event(str(gated.get("event", ""))):
+			all.append((gated["draft"] as Dictionary).duplicate(true))
+	return all

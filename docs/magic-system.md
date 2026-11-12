@@ -10,7 +10,7 @@
 | Text Normalization | ✅ | `text_normalizer.gd`：去空白/标点、全角折叠、小写、CJK 保留 |
 | **Exact Cache** | ✅ | `spell_cache.gd`：原样文本 → draft，跨冒险持久 |
 | **Normalized Cache** | ✅ | 同上：规范化键 → {raw, draft}，同一咒语的标点/空格变体复用解析 |
-| Local Spell Rules | ✅ | `local_spell_registry.gd`：13 条本地咒语习语 |
+| Local Spell Rules | ✅ | `local_spell_registry.gd`：13 条本地咒语习语 + 1 条委托解锁（`UNLOCKABLE` 门控于世界记忆事件） |
 | Semantic Cache | ✅ | EmbeddingProvider（OpenAI 兼容 /embeddings）+ 余弦 ≥0.86 复用；命中仍过验证与会话唯一门；填 embedding_model 即启用 |
 | AI Spell Parser | ✅ | `scripts/ai/spell_parser.gd`（OpenAI 兼容；经 `chat_provider.gd`，见下） |
 | Schema/Skill Validation | ✅ | `spell_validator.gd`：白名单 + 数值钳制 |
