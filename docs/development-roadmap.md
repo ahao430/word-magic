@@ -32,7 +32,7 @@
 | UI | `scripts/ui/` | 标题页、暂停面板、法术图鉴（滚动/筛选）、存档槽面板、HUD 血魔条 + Boss 血条 + 天气指示 |
 | 工具链 | `tools/dev/` `.github/` | run_tests.sh 一键回归（看门狗/汇总）+ 提交前检查表 + CI（测试 + 双平台导出 + 滚动 Release） |
 
-## 测试索引（34 套 / 754+ 断言）
+## 测试索引（34 套 / 763+ 断言）
 
 `tools/dev/run_tests.sh` 一键全量（发现 + 看门狗 + 汇总）；单套
 `godot --headless --path . -s res://tests/<name>_test.gd`：
@@ -43,7 +43,7 @@ player_animation · magic_pipeline · slime_sprites · combat · spell_session �
 spell_cache(35) · shapes(28) · puzzle · save · sfx · water_anim · ambient ·
 boss(31) · world_memory(24) · spellbook · flow(14) · camera(7) · settings(18) ·
 slots(18) · **ai_provider(34)** · **mouse_combat(20)** · **voice(19)** ·
-**weather(50)** · **balance(30)** · **regions(26)** · **npc(15)**
+**weather(50)** · **balance(30)** · **regions(26)** · **npc(24)**
 
 （加粗为 AI/语音/天气/平衡阶段新增；括号内为断言数。）
 测试隔离：`tests/test_isolation.gd` 统一 stash/unstash `user://` 下真实文件
@@ -77,7 +77,8 @@ slots(18) · **ai_provider(34)** · **mouse_combat(20)** · **voice(19)** ·
 | af4fd8f | 平衡轮（潜力计价 + 2.0 效率守卫 + knockback 真实现） |
 | ca24b5a | 第二区域骨架：迷雾湿地（区域偏置/界门/精英/永久发现记忆） |
 | 7999a81 | 湿地内容化：沼泽之心/灵泉（E 交互 + 永久成长）+ 两条湿地习语 |
-| （本轮） | 守林人 NPC：世界记忆感知台词 + 对话框 + E/Esc 交互路由 |
+| 1d49393 | 守林人 NPC：世界记忆感知台词 + 对话框 + E/Esc 交互路由 |
+| （本轮） | 首个委托：取回沼泽之心（E 确认/Esc 暂缓 + 永久祝福奖励） |
 
 ## 已知限制与待办
 

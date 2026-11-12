@@ -62,6 +62,8 @@ func _ready() -> void:
 		player.apply_swamp_heart()
 	if WorldMemory.has_event(WorldMemory.EVENT_SPRING):
 		player.apply_spring_blessing()
+	if WorldMemory.has_event(WorldMemory.EVENT_QUEST_DONE):
+		player.apply_keepers_blessing()
 	GameManager.set_state(GameManager.GameState.PLAYING)
 	# One frame late: attaching the music player during _ready makes the
 	# busy root reject add_child.
@@ -125,12 +127,17 @@ func _try_interact() -> void:
 	var reaction: Dictionary = best.call("interact", player)
 	if reaction.has("dialogue"):
 		var convo: Dictionary = reaction["dialogue"]
+		_pending_action = {"node": best, "action": str(reaction.get("pending_action", ""))}
 		_ensure_dialogue().open(str(convo.get("speaker", "")), convo.get("lines", []))
 	else:
 		_toast(str(reaction.get("message", "")), bool(reaction.get("ok", false)))
 
 
 var _dialogue: PanelContainer
+
+## Quest offers commit only when the player E-confirms the FINAL page
+## (Esc postpones); the box reports which close path was taken.
+var _pending_action := {"node": null, "action": ""}
 
 
 ## One E press: advance an open conversation, else poke the nearest
@@ -148,8 +155,21 @@ func _handle_interact() -> void:
 func _ensure_dialogue() -> PanelContainer:
 	if _dialogue == null:
 		_dialogue = load("res://scripts/ui/dialogue_box.gd").new()
+		_dialogue.closed.connect(_on_dialogue_closed)
 		$HUD.add_child(_dialogue)
 	return _dialogue
+
+
+## E-confirmed final pages commit their pending action (quest accept /
+## turn-in); Esc closes without consequence.
+func _on_dialogue_closed(via_advance: bool) -> void:
+	var node: Node = _pending_action["node"]
+	var action: String = _pending_action["action"]
+	_pending_action = {"node": null, "action": ""}
+	if not via_advance or action == "" or node == null or not is_instance_valid(node):
+		return
+	var result: Dictionary = node.call("confirm_action", player, action)
+	_toast(str(result.get("message", "")), bool(result.get("ok", false)))
 
 
 ## --- Voice input (AGENTS.md §9): hold V, release, confirm ---

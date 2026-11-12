@@ -1,9 +1,10 @@
 extends SceneTree
-## Headless test for the first NPC round: the Forest Keeper's
-## world-aware dialogue lines (pure), the code-built dialogue box state
-## machine (open/advance/Esc-close), keeper placement + interact
-## payload in the world, and the full main-scene E-routing end to end
-## (dialogue beats pause while open).
+## Headless test for the NPC + quest round: the Forest Keeper's
+## world-aware dialogue lines (pure), the first quest (「取回沼泽之心」:
+## E-on-final-page commits, Esc postpones), the dialogue box state
+## machine, keeper placement in the world, and the full main-scene
+## E-routing end to end (dialogue beats pause; quest commits only on
+## E; blessing replays from world memory).
 
 var _failures := 0
 var _cache_backup := ""
@@ -23,16 +24,27 @@ func _run() -> void:
 
 	# --- Pure line builder: the keeper remembers the world ---
 	var keeper_script: GDScript = load("res://scripts/world/keeper.gd")
-	var fresh: Array = keeper_script.build_lines({})
-	_expect(fresh.size() == 4 and fresh[1].contains("沉睡") and fresh[2].contains("石门"),
-			"fresh world: boss sleeping, wetland unexplored (%d lines)" % fresh.size())
-	var boss_gone: Array = keeper_script.build_lines({"boss_dead": true})
-	_expect(boss_gone[1].contains("倒下"), "boss defeat changes the story")
-	var found: Array = keeper_script.build_lines({"wetland_found": true})
-	_expect(found[2].contains("灵泉"), "wetland discovery changes the story")
-	var elite_gone: Array = keeper_script.build_lines({"wetland_found": true, "elite_dead": true})
-	_expect(elite_gone.size() == 5 and elite_gone[3].contains("深沼"),
-			"elite defeat adds a line only when the wetland is known")
+	var fresh: Dictionary = keeper_script.build_lines({})
+	_expect((fresh["lines"] as Array).size() == 5
+			and fresh["lines"][1].contains("沉睡")
+			and fresh["lines"][2].contains("石门")
+			and fresh["action"] == keeper_script.ACTION_ACCEPT,
+			"fresh world: intro + quest offer with accept action")
+	var boss_gone: Dictionary = keeper_script.build_lines({"boss_dead": true})
+	_expect(boss_gone["lines"][1].contains("倒下"), "boss defeat changes the story")
+	var taken: Dictionary = keeper_script.build_lines({"quest_taken": true})
+	_expect(not taken.has("action") and taken["lines"][3].contains("委托还挂着"),
+			"active quest: progress line, no action")
+	var ready: Dictionary = keeper_script.build_lines({"quest_taken": true, "elite_dead": true})
+	_expect(ready["action"] == keeper_script.ACTION_TURN_IN
+			and ready["lines"][3].contains("E 交付"),
+			"elite dead + quest active: turn-in page")
+	var done: Dictionary = keeper_script.build_lines({"quest_done": true})
+	_expect(not done.has("action") and done["lines"][3].contains("清晰多了"),
+			"quest done: thanks line, no action")
+	var refused: Dictionary = keeper_script.build_lines({"elite_dead": true})
+	_expect(not refused.has("action") and refused["lines"][3].contains("可惜了"),
+			"elite dead without the quest: a regret line, no action")
 
 	# --- Dialogue box state machine ---
 	var box: PanelContainer = load("res://scripts/ui/dialogue_box.gd").new()
@@ -41,18 +53,20 @@ func _run() -> void:
 	_expect(not box.visible, "box starts hidden")
 	box.open("守林人", ["一", "二", "三"])
 	_expect(box.visible, "box opens")
-	var closed_count := {"n": 0}
-	box.closed.connect(func() -> void: closed_count["n"] = int(closed_count["n"]) + 1)
+	var closes := {"advance": 0, "esc": 0}
+	box.closed.connect(func(via_advance: bool) -> void:
+		closes["advance"] = int(closes["advance"]) + (1 if via_advance else 0)
+		closes["esc"] = int(closes["esc"]) + (0 if via_advance else 1))
 	_expect(box.advance() and box.advance() and not box.advance(),
 			"advance walks pages then closes")
-	_expect(not box.visible and int(closed_count["n"]) == 1, "closed signal fired once")
+	_expect(int(closes["advance"]) == 1 and not box.visible, "E-close reports via_advance")
 	box.open("守林人", ["一", "二"])
 	Input.action_press("pause")
 	await process_frame
 	Input.action_release("pause")
 	await process_frame
-	_expect(not box.visible and int(closed_count["n"]) == 2,
-			"Esc closes mid-conversation")
+	_expect(not box.visible and int(closes["esc"]) == 1,
+			"Esc closes mid-conversation as a postpone")
 
 	# --- World placement + interact payload ---
 	var world: Node2D = load("res://scenes/world/world.tscn").instantiate()
@@ -64,10 +78,30 @@ func _run() -> void:
 			"the keeper stands by the gate")
 	var talk: Dictionary = keeper.call("interact", null)
 	_expect(bool(talk["ok"]) and talk["dialogue"]["speaker"] == "守林人"
-			and (talk["dialogue"]["lines"] as Array).size() == 4,
-			"interact returns speaker + world-aware lines")
+			and (talk["dialogue"]["lines"] as Array).size() == 5
+			and talk["pending_action"] == keeper_script.ACTION_ACCEPT,
+			"interact returns world-aware lines + the quest offer")
 
-	# --- End to end: main routes E, dialogue beats pause ---
+	# --- confirm_action: accept, turn-in, guards ---
+	var accept: Dictionary = keeper.call("confirm_action", null, keeper_script.ACTION_ACCEPT)
+	_expect(bool(accept["ok"]) and WorldMemory.has_event(WorldMemory.EVENT_QUEST_TAKEN),
+			"E-confirmed accept records the quest")
+	_expect(not keeper.call("confirm_action", null, keeper_script.ACTION_ACCEPT)["ok"],
+			"double-accept refused")
+	_expect(not keeper.call("confirm_action", null, keeper_script.ACTION_TURN_IN)["ok"],
+			"turn-in refused before the elite falls")
+	WorldMemory.record_and_persist(WorldMemory.EVENT_ELITE)
+	var donor: CharacterBody2D = load("res://scenes/player/player.tscn").instantiate()
+	root.add_child(donor)
+	await physics_frame
+	var turned: Dictionary = keeper.call("confirm_action", donor, keeper_script.ACTION_TURN_IN)
+	_expect(bool(turned["ok"]) and WorldMemory.has_event(WorldMemory.EVENT_QUEST_DONE)
+			and absf(float(donor.get("mana_regen")) - 2.5) < 0.001,
+			"turn-in blesses the regen 2.0 -> 2.5 (%.2f)" % float(donor.get("mana_regen")))
+	donor.free()
+
+	# --- End to end: main routes E, dialogue beats pause, quest commits ---
+	WorldMemory.reset()
 	var main: Node2D = load("res://scenes/main/main.tscn").instantiate()
 	root.add_child(main)
 	await physics_frame
@@ -91,20 +125,39 @@ func _run() -> void:
 	Input.action_release("pause")
 	await process_frame
 	_expect(not hbox.visible and not pause_panel.visible,
-			"Esc closes the dialogue without pausing")
+			"Esc closes the dialogue without pausing or committing")
+	_expect(not WorldMemory.has_event(WorldMemory.EVENT_QUEST_TAKEN),
+			"Esc on the offer page postpones the quest")
 	main.call("_handle_interact")
 	await physics_frame
 	_expect(hbox.visible, "re-talking reopens the box")
-	# Walk until closed; extra presses beyond the last page would start
-	# a fresh conversation (the player is still standing there).
-	var advances := 0
-	while hbox.visible and advances < 10:
+	var steps := 0
+	while hbox.visible and steps < 10:
 		main.call("_handle_interact")
-		advances += 1
-	_expect(not hbox.visible and advances >= 3,
-			"E walks every page and closes (%d advances)" % advances)
+		steps += 1
+	_expect(not hbox.visible and steps >= 4,
+			"E walks every page and closes (%d advances)" % steps)
+	_expect(WorldMemory.has_event(WorldMemory.EVENT_QUEST_TAKEN),
+			"E-confirming the final page accepts the quest")
 	main.free()
 	world.free()
+	await physics_frame
+
+	# --- Blessing replays from world memory on a fresh main ---
+	WorldMemory.reset()
+	WorldMemory.record_and_persist(WorldMemory.EVENT_QUEST_DONE)
+	var main2: Node2D = load("res://scenes/main/main.tscn").instantiate()
+	root.add_child(main2)
+	await physics_frame
+	await physics_frame
+	var player2: CharacterBody2D = null
+	for child in main2.get_node("World").get_entity_parent().get_children():
+		if child is CharacterBody2D and child.name == "Player":
+			player2 = child
+			break
+	_expect(absf(float(player2.get("mana_regen")) - 2.5) < 0.001,
+			"keeper's blessing replays from world memory")
+	main2.free()
 	await physics_frame
 
 	_teardown()

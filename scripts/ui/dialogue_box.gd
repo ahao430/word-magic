@@ -3,7 +3,9 @@ extends PanelContainer
 ## wrapped text, key hint. E advances (main routes the key), Esc closes
 ## at any page; the pause panel yields to an open dialogue.
 
-signal closed
+## closed(via_advance): true when the last page was E-confirmed;
+## false on Esc — quest offers only commit on via_advance.
+signal closed(via_advance: bool)
 
 var _speaker_label: Label
 var _text_label: Label
@@ -42,7 +44,7 @@ func _init() -> void:
 func _process(_delta: float) -> void:
 	# Esc while open ends the conversation (the pause panel yields).
 	if visible and Input.is_action_just_pressed("pause"):
-		close()
+		close(false)
 
 
 func open(speaker: String, lines: Array) -> void:
@@ -60,17 +62,17 @@ func advance() -> bool:
 		return false
 	_index += 1
 	if _index >= _lines.size():
-		close()
+		close(true)
 		return false
 	_render()
 	return true
 
 
-func close() -> void:
+func close(via_advance := false) -> void:
 	visible = false
 	_lines = []
 	_index = 0
-	closed.emit()
+	closed.emit(via_advance)
 
 
 func _render() -> void:

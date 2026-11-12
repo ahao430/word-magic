@@ -20,13 +20,15 @@ const ECHO_COOLDOWN := 0.8
 
 const SPEED := 160.0
 const MANA_BASE := 100.0
-const MANA_REGEN := 2.0
+const MANA_REGEN_BASE := 2.0
 const HP_BASE := 30.0
 ## Permanent growth (world-memory replay in main applies these): the
 ## swamp heart (+hp) and the spring blessing (+mana) stack onto the
 ## baseline so saves stay forward/backward compatible.
 var hp_max := HP_BASE
 var mana_max := MANA_BASE
+## Regen rate: grows with permanent world progress (keeper's blessing).
+var mana_regen := MANA_REGEN_BASE
 const INVULN_TIME := 0.8
 const KNOCKBACK := 140.0
 ## Dev-map respawn point (the stone crossing); real save/spawn handling
@@ -48,7 +50,7 @@ var hp := hp_max
 
 func _physics_process(_delta: float) -> void:
 	# Clear skies feed the caster: +50% regeneration in the sun (Weather).
-	mana = minf(mana + MANA_REGEN * Weather.mana_regen_scale() * _delta, mana_max)
+	mana = minf(mana + mana_regen * Weather.mana_regen_scale() * _delta, mana_max)
 	_basic_cd = maxf(_basic_cd - _delta, 0.0)
 	_echo_cd = maxf(_echo_cd - _delta, 0.0)
 	if shield_timer > 0.0:
@@ -132,6 +134,11 @@ func apply_swamp_heart() -> void:
 func apply_spring_blessing() -> void:
 	mana_max += 10.0
 	mana = minf(mana + 10.0, mana_max)
+
+
+## 守林人的祝福 (quest reward): +25% mana regeneration, forever.
+func apply_keepers_blessing() -> void:
+	mana_regen = MANA_REGEN_BASE * 1.25
 
 
 ## LMB/Space attack: one free arcane bolt along aim_dir. Returns false
