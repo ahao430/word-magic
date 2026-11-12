@@ -23,6 +23,11 @@ func _process(_delta: float) -> void:
 		if Input.is_action_just_pressed("pause"):
 			voice.call("cancel")
 		return
+	# An open dialogue owns Esc (it closes itself in its own
+	# _process); pausing mid-conversation would be jarring.
+	var dbox := main.get_node_or_null("HUD/DialogueBox")
+	if dbox != null and dbox.visible:
+		return
 	if Input.is_action_just_pressed("pause"):
 		if visible:
 			_resume()

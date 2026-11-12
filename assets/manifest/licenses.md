@@ -18,6 +18,7 @@
 | 史莱姆精灵（2 帧弹跳 + SpriteFrames） | `assets/sprites/enemies/*.png`、`slime_frames.tres` | 程序化合成（`tools/dev/build_slime_sprites.gd`） | 同上 | 未确认 | 无 | 程序化生成，真 Alpha 裁切 |
 | 史莱姆王 Boss 精灵（2 帧重弹跳 + 王冠 + SpriteFrames） | `assets/sprites/enemies/boss_slime_idle_*.png`、`boss_frames.tres` | 程序化合成（`tools/dev/build_boss_sprites.gd`，配色为史莱姆深色变体） | 同上 | 未确认 | 无 | 程序化生成，金色王冠 + 红宝石，真 Alpha 裁切 |
 | Boss 大型阴影 | `assets/sprites/effects/boss_shadow_28x12.png` | 程序化合成（`tools/dev/build_boss_sprites.gd`） | 同上 | 无需 | 无 | 28×12 径向 Alpha 椭圆（同 shadow_16x8 配方放大） |
+| 守林人 NPC 精灵 | `assets/sprites/npc/keeper.png` | 程序化合成（`tools/dev/build_npc_sprite.gd`） | 同上 | 未确认 | 无 | 程序化生成（斗篷+法杖），真 Alpha 裁切 |
 | Boss 重砸落点预警圈 | `assets/sprites/effects/slam_warning_164.png` | 程序化合成（`tools/dev/build_boss_sprites.gd`） | 同上 | 无需 | 无 | 164×164 红色危险圈（边界 0.85 + 填充 0.30 半透明），运行时 0.55→1.0 闪烁脉冲 |
 | 符文石精灵（休眠/苏醒 两态） | `assets/sprites/puzzles/rune_*.png` | 程序化合成（`tools/dev/build_rune_sprites.gd`） | 同上 | 未确认 | 无 | 程序化生成，刻痕符文双色 |
 | 音效 ×13（施法/命中/爆炸/受伤/机关/Boss 落地与死亡/元素受击 冰·雷·风） | `assets/audio/sfx/*.tres` | 程序化合成（`tools/dev/build_sfx.gd`，AudioStreamWAV 正弦/噪声合成） | 程序化生成（无外部来源） | 无需 | 无 | 确定性合成，可复现 |
@@ -40,3 +41,4 @@
 - [ ] 项目所有者确认所用图像生成服务的名称与条款（训练/商用/署名），更新上表状态。
 - [ ] 正式发布前，将所有 `pending` 素材替换为已验证来源或确认可商用的版本。
 - [ ] 引入第一个外部素材包时建立对应登记行。
+| keeper.png | 程序生成（tools/dev/build_npc_sprite.gd） | 本项目 | 自有 | 允许 | 无 | 允许修改 |

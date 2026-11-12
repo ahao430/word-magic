@@ -90,7 +90,7 @@ func _process(_delta: float) -> void:
 	if Input.is_action_just_pressed("reset_world"):
 		_do_world_reset()
 	if Input.is_action_just_pressed("interact"):
-		_try_interact()
+		_handle_interact()
 	if Input.is_action_pressed("attack"):
 		_try_basic_attack()
 	if Input.is_action_just_pressed("cast_echo"):
@@ -123,7 +123,33 @@ func _try_interact() -> void:
 	if best == null:
 		return
 	var reaction: Dictionary = best.call("interact", player)
-	_toast(str(reaction.get("message", "")), bool(reaction.get("ok", false)))
+	if reaction.has("dialogue"):
+		var convo: Dictionary = reaction["dialogue"]
+		_ensure_dialogue().open(str(convo.get("speaker", "")), convo.get("lines", []))
+	else:
+		_toast(str(reaction.get("message", "")), bool(reaction.get("ok", false)))
+
+
+var _dialogue: PanelContainer
+
+
+## One E press: advance an open conversation, else poke the nearest
+## interactable. (Split out so tests can drive it without Input frame
+## timing.)
+func _handle_interact() -> void:
+	var box := _ensure_dialogue()
+	if box.visible:
+		box.advance()
+	else:
+		_try_interact()
+
+
+## Lazily built bottom dialogue box (code UI; the scene stays clean).
+func _ensure_dialogue() -> PanelContainer:
+	if _dialogue == null:
+		_dialogue = load("res://scripts/ui/dialogue_box.gd").new()
+		$HUD.add_child(_dialogue)
+	return _dialogue
 
 
 ## --- Voice input (AGENTS.md §9): hold V, release, confirm ---

@@ -66,6 +66,9 @@ const ELITE_CELL := Vector2i(58, 10)
 ## here, so ponds can never bury it).
 const SPRING_CELL := Vector2i(60, 22)
 
+## The Forest Keeper stands beside the path, just west of the gate.
+const KEEPER_CELL := Vector2i(46, 15)
+
 ## Fired once when the boss dies (the boss_defeated flag + save tier
 ## record it; this notifies the HUD).
 signal boss_died
@@ -133,6 +136,7 @@ func _ready() -> void:
 	_setup_puzzle()
 	_spawn_gate()
 	_spawn_spring(water_cell)
+	_spawn_keeper()
 	_build_walls()
 	_setup_water_shimmer(water_cell)
 	_setup_waterfall(water_cell)
@@ -335,9 +339,12 @@ func _sway_trees() -> void:
 					var phase := (int(parts[1]) * 13 + int(parts[2]) * 7) * 0.37
 					_sway_targets.append([sprite, phase])
 	for pair in _sway_targets:
+		# Prop spawners queue_free trees after this cache was built; a
+		# freed object must never cross the typed assignment.
+		if not is_instance_valid(pair[0]):
+			continue
 		var sprite: Sprite2D = pair[0]
-		if is_instance_valid(sprite):
-			sprite.rotation = sin(_sway_time * 1.4 + pair[1]) * 0.022
+		sprite.rotation = sin(_sway_time * 1.4 + pair[1]) * 0.022
 
 
 func _setup_water_shimmer(water_cell: Dictionary) -> void:
@@ -625,6 +632,18 @@ func _spawn_gate() -> void:
 		sprite.position = Vector2(0, -22)
 		pillar.add_child(sprite)
 		props.add_child(pillar)
+
+
+## The Keeper: first NPC, solid, standing by the gate.
+func _spawn_keeper() -> void:
+	for child in props.get_children():
+		var is_blocking_prop: bool = child.name.begins_with("Tree_") or child.name.begins_with("Rock_")
+		if is_blocking_prop and Vector2i(int(child.position.x) / 32, int(child.position.y - 16) / 32) == KEEPER_CELL:
+			child.queue_free()
+	var keeper: StaticBody2D = load("res://scripts/world/keeper.gd").new()
+	keeper.name = "Keeper"
+	keeper.position = _cell_bottom_center(KEEPER_CELL)
+	props.add_child(keeper)
 
 
 ## 2 Hz region poll: feed the weather system its region bias and fire
