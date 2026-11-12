@@ -1,0 +1,19 @@
+[gd_resource type="SpriteFrames" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/fly_idle_01.png" id="1_fly"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemies/fly_idle_02.png" id="2_fly"]
+
+[resource]
+resource_name = "FlyFrames"
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_fly")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_fly")
+}],
+"loop": 1,
+"name": &"default",
+"speed": 10.0
+}]

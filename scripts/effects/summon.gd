@@ -68,7 +68,8 @@ func _zap_nearest(damage: float) -> void:
 	for child in parent.get_children():
 		if child == self or not (child is CharacterBody2D):
 			continue
-		if not (child.name.begins_with("Slime") or child.name.begins_with("BossSlime")):
+		if not (child.name.begins_with("Slime") or child.name.begins_with("BossSlime")
+				or child.name.begins_with("SwampFly")):
 			continue
 		if child.get("alive") == false:
 			continue

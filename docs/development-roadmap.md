@@ -22,7 +22,7 @@
 |---|---|---|
 | 施法管线 | `scripts/magic/` | 三层缓存（exact/normalized/semantic 余弦 ≥0.86）+ 本地规则 + 验证钳制 + **潜力计价（2.0 效率守卫）** + 唯一性 + 工厂 + 执行器 |
 | 执行形状 | `scripts/effects/` | **8/8 全觉醒**：投射物 / 爆炸 / 范围爆发 / 光束 / 冻结领域 / 狂风龙卷 / 护壁 / 唤灵 |
-| 敌人 | `scripts/enemies/` | 史莱姆（游荡/追击/冻结/吹飞/**畏水/湿天减速**）、史莱姆王（技能循环 + 预警圈 + 二段狂怒 + **风暴狂怒**） |
+| 敌人 | `scripts/enemies/` | 史莱姆（游荡/追击/冻结/吹飞/**畏水/湿天减速**）、**沼泽蝇**（飞行渡水/绕飞/风漂/轻身 2.5× 推飞）、史莱姆王（技能循环 + 预警圈 + 二段狂怒 + **风暴狂怒**） |
 | 天气 | `scripts/world/` | 四态游走（种子）/ 风偏弹道 / 雨系元素修正 / **雨中链电** / 区域随风漂移 / 晴日回蓝 / 敌我双向适配 |
 | 输入 | `scripts/core/` `scripts/voice/` | 暗黑式鼠标（LMB 普攻吸附 / RMB 法术回响）+ 键盘 + 语音 PTT（AGENTS §9 全规则） |
 | AI Provider | `scripts/ai/` | Chat/ASR/Embedding 三抽象（OpenAI 兼容）+ mock 缝离线全覆盖 + 失败分类学；密钥仅存 config/ai.json |
@@ -32,7 +32,7 @@
 | UI | `scripts/ui/` | 标题页、暂停面板、法术图鉴（滚动/筛选）、存档槽面板、HUD 血魔条 + Boss 血条 + 天气指示 |
 | 工具链 | `tools/dev/` `.github/` | run_tests.sh 一键回归（看门狗/汇总）+ 提交前检查表 + CI（测试 + 双平台导出 + 滚动 Release） |
 
-## 测试索引（35 套 / 787+ 断言）
+## 测试索引（36 套 / 797+ 断言）
 
 `tools/dev/run_tests.sh` 一键全量（发现 + 看门狗 + 汇总）；单套
 `godot --headless --path . -s res://tests/<name>_test.gd`：
@@ -43,7 +43,7 @@ player_animation · magic_pipeline · slime_sprites · combat · spell_session �
 spell_cache(35) · shapes(28) · puzzle · save · sfx · water_anim · ambient ·
 boss(31) · world_memory(24) · spellbook · flow(14) · camera(7) · settings(18) ·
 slots(18) · **ai_provider(34)** · **mouse_combat(20)** · **voice(19)** ·
-**weather(50)** · **balance(30)** · **regions(26)** · **npc(27)** · **seed(15)**
+**weather(50)** · **balance(30)** · **regions(26)** · **npc(27)** · **seed(15)** · **fly(10)**
 
 （加粗为 AI/语音/天气/平衡阶段新增；括号内为断言数。）
 测试隔离：`tests/test_isolation.gd` 统一 stash/unstash `user://` 下真实文件
@@ -80,7 +80,8 @@ slots(18) · **ai_provider(34)** · **mouse_combat(20)** · **voice(19)** ·
 | 1d49393 | 守林人 NPC：世界记忆感知台词 + 对话框 + E/Esc 交互路由 |
 | 906d1cf | 首个委托：取回沼泽之心（E 确认/Esc 暂缓 + 永久祝福奖励） |
 | 1481c55 | 委托奖励法术化：解锁层 + 传授「激流贯射」 |
-| （本轮） | 程序化世界种子：单一 layout_seed 驱动布局、新游戏随机、存档往返 |
+| af52c88 | 程序化世界种子：单一 layout_seed 驱动布局、新游戏随机、存档往返 |
+| （本轮） | 沼泽蝇敌种：飞行无视畏水/绕飞/风漂/轻身推飞 |
 
 ## 已知限制与待办
 

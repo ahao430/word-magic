@@ -170,6 +170,7 @@ func _build_layout() -> void:
 	_scatter_props(west_placements + east_placements)
 	_scatter_slimes(dirt_cell, water_cell)
 	_scatter_wetland_slimes(water_cell)
+	_scatter_wetland_flies(water_cell)
 	_spawn_boss()
 	_setup_puzzle()
 	_spawn_gate()
@@ -527,7 +528,7 @@ func capture_state() -> Dictionary:
 	for child in props.get_children():
 		if child.has_method("try_activate"):
 			rune_state = child.state
-		elif child is CharacterBody2D and child.name.begins_with("Slime"):
+		elif child is CharacterBody2D and (child.name.begins_with("Slime") or child.name.begins_with("SwampFly")):
 			alive_slimes.append(child.name)
 	var weather := get_weather()
 	var weather_state: Dictionary = weather.capture_state() if weather != null else {}
@@ -562,7 +563,7 @@ func restore_state(data: Dictionary) -> void:
 				child.call("force_activate")
 	var alive: Array = data.get("alive_slimes", [])
 	for child in props.get_children():
-		if child is CharacterBody2D and child.name.begins_with("Slime"):
+		if child is CharacterBody2D and (child.name.begins_with("Slime") or child.name.begins_with("SwampFly")):
 			if not alive.has(child.name):
 				child.queue_free()
 	if data.has("weather") and not data["weather"].is_empty():
@@ -643,6 +644,25 @@ func _scatter_wetland_slimes(water_cell: Dictionary) -> void:
 	elite.get_node("SlimeSprite").modulate = Color(0.55, 0.75, 0.5)
 	# The heart of the swamp: main grants the permanent upgrade on died.
 	elite.connect("died", _on_elite_died)
+
+
+## Wetland flies: four pests buzzing over the ponds (they ignore water
+## entirely — crossing rivers is their whole identity).
+func _scatter_wetland_flies(water_cell: Dictionary) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = layout_seed + 3 if layout_seed != 0 else 4242
+	var placed := 0
+	for cell: Vector2i in water_cell.keys():
+		if placed >= 4:
+			break
+		if cell.x < WETLAND_START or cell.y == SPAWN_CELL.y:
+			continue
+		if rng.randf() < 0.06:
+			var fly: CharacterBody2D = load("res://scenes/enemies/swamp_fly.tscn").instantiate()
+			fly.name = "SwampFly_%d_%d" % [cell.x, cell.y]
+			fly.position = Vector2(cell) * 32.0 + Vector2(16.0, 16.0)
+			props.add_child(fly)
+			placed += 1
 
 
 func _on_elite_died() -> void:
