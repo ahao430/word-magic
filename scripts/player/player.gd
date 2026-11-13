@@ -29,6 +29,8 @@ var hp_max := HP_BASE
 var mana_max := MANA_BASE
 ## Regen rate: grows with permanent world progress (keeper's blessing).
 var mana_regen := MANA_REGEN_BASE
+## 疾风靴 (shop item): permanent movement multiplier, replayed on build.
+var speed_mult := 1.0
 const INVULN_TIME := 0.8
 const KNOCKBACK := 140.0
 ## Dev-map respawn point (the stone crossing); real save/spawn handling
@@ -73,7 +75,7 @@ func _physics_process(_delta: float) -> void:
 		return
 
 	var dir := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	velocity = dir * SPEED
+	velocity = dir * SPEED * speed_mult
 	move_and_slide()
 	if dir != Vector2.ZERO:
 		_facing = _facing_from(dir)
@@ -140,6 +142,11 @@ func apply_spring_blessing() -> void:
 ## 守林人的祝福 (quest reward): +25% mana regeneration, forever.
 func apply_keepers_blessing() -> void:
 	mana_regen = MANA_REGEN_BASE * 1.25
+
+
+## 疾风靴 (shop item): +15% movement speed, forever.
+func apply_windrunner() -> void:
+	speed_mult = 1.15
 
 
 ## LMB/Space attack: one free arcane bolt along aim_dir. Returns false

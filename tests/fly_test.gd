@@ -36,6 +36,9 @@ func _run() -> void:
 	await physics_frame
 	var fly_x0: float = fly.global_position.x
 	var slime_x0: float = slime.global_position.x
+	# Freeze the slime: its random wander would otherwise pollute the
+	# comparison (a frozen body reads exactly 0 drift).
+	slime.call("apply_freeze", 2.0)
 	Weather.wind = Vector2(100, 0)
 	for i in 30:
 		await physics_frame

@@ -140,9 +140,12 @@ func _run() -> void:
 	gm.set("pending_load_slot", "slot_01")
 	var main3: Node2D = load("res://scenes/main/main.tscn").instantiate()
 	root.add_child(main3)
-	# The load branch runs after main's Music-play await chain settles
-	# (flow_test's proven wait: a 0.4s timer, not bare frames).
-	await create_timer(0.4).timeout
+	# The load branch runs after main's Music-play await chain settles —
+	# poll for the restore instead of a fixed timer (robust under load).
+	for i in 240:
+		await physics_frame
+		if int(main3.get_node("World").layout_seed) == 424242:
+			break
 	var world3: Node2D = main3.get_node("World")
 	_expect(int(world3.layout_seed) == 424242, "the save restores its seed")
 	_expect(world3.ford_built and world3.boss_defeated,

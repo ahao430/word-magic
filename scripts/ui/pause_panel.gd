@@ -40,6 +40,10 @@ func _process(_delta: float) -> void:
 	# An open journey page owns Esc (it closes itself in ALWAYS mode).
 	if _journey != null and _journey.visible:
 		return
+	# The shop and an open dialogue own Esc before the pause does.
+	var shop := main.get_node_or_null("HUD/ShopPanel")
+	if shop != null and shop.visible:
+		return
 	# An open dialogue owns Esc (it closes itself in its own
 	# _process); pausing mid-conversation would be jarring.
 	var dbox := main.get_node_or_null("HUD/DialogueBox")

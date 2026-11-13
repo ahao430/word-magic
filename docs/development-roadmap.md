@@ -29,10 +29,10 @@
 | 世界 | `scripts/world/` | 种子确定性重建 + 增量重放；河流/瀑布动画/树摇/BGM |
 | 存档 | `scripts/save/` | 三层：世界记忆（永久）/ 会话槽（3 槽管理 UI）/ 法术缓存；全部原子写 + 版本校验 + 损坏安全 |
 | 音频 | `scripts/audio/` | 13 条程序化 SFX（元素化施法/受击/落地）+ 24s 循环 BGM；Music/SFX 总线 + 设置面板实时调节 |
-| UI | `scripts/ui/` | 标题页、暂停面板（+**旅程页**）、法术图鉴（滚动/筛选）、存档槽面板、对话框、HUD 血魔条 + Boss 血条 + 天气指示 |
+| UI | `scripts/ui/` | 标题页、暂停面板（+旅程页）、法术图鉴、存档槽面板、对话框（末页选项）、**行囊商店**、HUD 血魔条 + Boss 血条 + 天气指示 |
 | 工具链 | `tools/dev/` `.github/` | run_tests.sh 一键回归（看门狗/汇总）+ 提交前检查表 + CI（测试 + 双平台导出 + 滚动 Release） |
 
-## 测试索引（40 套 / 857+ 断言）
+## 测试索引（41 套 / 868+ 断言）
 
 `tools/dev/run_tests.sh` 一键全量（发现 + 看门狗 + 汇总）；单套
 `godot --headless --path . -s res://tests/<name>_test.gd`：
@@ -43,7 +43,7 @@ player_animation · magic_pipeline · slime_sprites · combat · spell_session �
 spell_cache(35) · shapes(28) · puzzle · save · sfx · water_anim · ambient ·
 boss(31) · world_memory(24) · spellbook · flow(14) · camera(7) · settings(18) ·
 slots(18) · **ai_provider(34)** · **mouse_combat(20)** · **voice(19)** ·
-**weather(50)** · **balance(30)** · **regions(26)** · **npc(27)** · **seed(15)** · **fly(10)** · **expedition(13)** · **journey(16)** · **achievements(10)** · **playthrough(18)**
+**weather(50)** · **balance(30)** · **regions(26)** · **npc(27)** · **seed(15)** · **fly(10)** · **expedition(13)** · **journey(16)** · **achievements(10)** · **playthrough(18)** · **shop(11)**
 
 （加粗为 AI/语音/天气/平衡阶段新增；括号内为断言数。）
 测试隔离：`tests/test_isolation.gd` 统一 stash/unstash `user://` 下真实文件
@@ -85,7 +85,8 @@ slots(18) · **ai_provider(34)** · **mouse_combat(20)** · **voice(19)** ·
 | abb10c4 | 远征雏形：深沼回响（可重复计时挑战 + 永久最佳纪录） |
 | 88fab9a | 旅程统计页：五项终身计数 + 世界记忆时间线 |
 | 17fca77 | 成就系统：九枚成就（纯数据定义 + 纯函数判定 + 永久点亮） |
-| （本轮） | 通关验收套件：全旅程 e2e（并修复读档 reseed 抹除玩家的真 bug） |
+| c54956b | 通关验收套件：全旅程 e2e（并修复读档 reseed 抹除玩家的真 bug） |
+| （本轮） | 远征经济：徽记货币 + 守林人行囊（三商品 + 购买重放） |
 
 ## 已知限制与待办
 

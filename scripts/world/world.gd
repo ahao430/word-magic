@@ -745,6 +745,12 @@ func _on_fly_died() -> void:
 ## 远征 echo: a fresh guardian of the swamp heart springs up at the
 ## throne cell for the repeatable challenge.
 func spawn_elite_echo() -> void:
+	# A previous echo's death tween may still be draining: free any
+	# leftover first so the fresh one owns its name (back-to-back
+	# expeditions would otherwise rename the new echo silently).
+	var leftover := props.get_node_or_null("SlimeEliteEcho")
+	if leftover != null and is_instance_valid(leftover):
+		leftover.free()
 	var echo: CharacterBody2D = load("res://scenes/enemies/slime.tscn").instantiate()
 	echo.name = "SlimeEliteEcho"
 	echo.position = Vector2(ELITE_CELL) * 32.0 + Vector2(16.0, 24.0)
@@ -758,18 +764,26 @@ func spawn_elite_echo() -> void:
 
 
 func _on_echo_died() -> void:
+	var runs0: int = WorldMemory.counter("expedition_runs")
+	var was_active := expedition_active
 	WorldMemory.bump_counter("expedition_runs")
 	expedition_active = false
-	var best := -1.0
+	if not was_active:
+		return
+	# 远征徽记: the shop currency. First completion pays 5, beating the
+	# record pays 3, a routine run pays 1.
 	var prior: Dictionary = WorldMemory.get_event(WorldMemory.EVENT_EXPEDITION)
+	var best := -1.0
 	if not prior.is_empty():
 		best = float(prior.get("best_seconds", -1.0))
 	var improved := best < 0.0 or _expedition_time < best
+	var marks := 5 if runs0 == 0 else (3 if improved else 1)
 	if improved:
 		WorldMemory.record_and_persist(WorldMemory.EVENT_EXPEDITION,
 				{"best_seconds": _expedition_time})
-		best = _expedition_time
-	expedition_completed.emit(_expedition_time, best, improved)
+	WorldMemory.bump_counter("expedition_marks", marks)
+	expedition_completed.emit(_expedition_time,
+			_expedition_time if improved else best, improved)
 
 
 ## The Keeper: first NPC, solid, standing by the gate.

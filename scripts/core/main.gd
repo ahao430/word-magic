@@ -67,6 +67,13 @@ func _ready() -> void:
 		player.apply_spring_blessing()
 	if WorldMemory.has_event(WorldMemory.EVENT_QUEST_DONE):
 		player.apply_keepers_blessing()
+	# Shop purchases replay from counters (bought_* keys).
+	for i in WorldMemory.counter("bought_mana"):
+		player.apply_spring_blessing()
+	for i in WorldMemory.counter("bought_hp"):
+		player.apply_swamp_heart()
+	if WorldMemory.counter("bought_windrunner") > 0:
+		player.apply_windrunner()
 	GameManager.set_state(GameManager.GameState.PLAYING)
 	# One frame late: attaching the music player during _ready makes the
 	# busy root reject add_child.
@@ -147,7 +154,8 @@ func _try_interact() -> void:
 	if reaction.has("dialogue"):
 		var convo: Dictionary = reaction["dialogue"]
 		_pending_action = {"node": best, "action": str(reaction.get("pending_action", ""))}
-		_ensure_dialogue().open(str(convo.get("speaker", "")), convo.get("lines", []))
+		_ensure_dialogue().open(str(convo.get("speaker", "")),
+				convo.get("lines", []), convo.get("options", []))
 	else:
 		_toast(str(reaction.get("message", "")), bool(reaction.get("ok", false)))
 
@@ -175,12 +183,30 @@ func _ensure_dialogue() -> PanelContainer:
 	if _dialogue == null:
 		_dialogue = load("res://scripts/ui/dialogue_box.gd").new()
 		_dialogue.closed.connect(_on_dialogue_closed)
-		$HUD.add_child(_dialogue)
+		_dialogue.option_chosen.connect(_on_dialogue_option)
+		$HUD.add_child.call_deferred(_dialogue)
 	return _dialogue
 
 
 ## E-confirmed final pages commit their pending action (quest accept /
 ## turn-in); Esc closes without consequence.
+## End-page option (the shop): the box closed itself; route the pick.
+func _on_dialogue_option(action: String) -> void:
+	if action == "shop":
+		_ensure_shop().open(player)
+
+
+var _shop: PanelContainer
+
+
+## The keeper's shop (code UI, lazily built like the dialogue box).
+func _ensure_shop() -> PanelContainer:
+	if _shop == null:
+		_shop = load("res://scripts/ui/shop_panel.gd").new()
+		$HUD.add_child.call_deferred(_shop)
+	return _shop
+
+
 func _on_dialogue_closed(via_advance: bool) -> void:
 	var node: Node = _pending_action["node"]
 	var action: String = _pending_action["action"]

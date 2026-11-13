@@ -46,6 +46,8 @@ func interact(_player: Node2D) -> Dictionary:
 			"speaker": "守林人", "lines": payload["lines"]}}
 	if payload.has("action"):
 		out["pending_action"] = payload["action"]
+	if state.get("quest_done", false):
+		out["dialogue"]["options"] = [{"label": "🛒 打开行囊", "action": "shop"}]
 	return out
 
 
